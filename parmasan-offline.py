@@ -51,6 +51,8 @@ for line in open(sys.argv[1]):
 # The pid->target mapping (which target is the process building).
 target_by_pid = {}
 for line in open(sys.argv[2]):
+    if line.startswith('#'):
+        continue
     pid, target = line[:-1].split(": ")
     target_by_pid[pid] = target
 
