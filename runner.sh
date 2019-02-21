@@ -35,9 +35,10 @@ cp make remake /tmp/bin
 cd "$src"
 make -f "$makefile" clean
 
-/mnt/co/libfuse/example/passthrough -f -s -d "$froot" &
+/mnt/co/libfuse/example/passthrough -s "$froot"
 
-cd "$froot/$src"
+cd "$froot/$src" || die "$0: cannot cd into fuse-managed $src"
+pwd
 /tmp/bin/remake -f "$makefile"
 
 fusermount3 -z -u "$froot" || die "$0: cannot unmount fuse fs"
