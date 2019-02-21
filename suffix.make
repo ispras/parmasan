@@ -1,11 +1,14 @@
-.PHONY: clean
+.PHONY: clean all
 
 all: all.sufout
 
-.SUFFIXES: .sufin .sufout
+.SUFFIXES: .sufin .sufint .sufout
 
-.sufin.sufout:
+.sufin.sufint:
+	cat $< > $@
+
+.sufint.sufout:
 	cat $< > $@
 
 clean:
-	rm -f all.sufout
+	rm -f all.sufout all.sufint
