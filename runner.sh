@@ -33,7 +33,7 @@ mkdir -p /tmp/bin/
 cp make remake /tmp/bin
 
 cd "$src"
-make -f "$makefile" clean
+make -f "$makefile" clean || die "$0: make clean failed"
 
 /mnt/co/libfuse/example/passthrough -s "$froot"
 
