@@ -8,14 +8,15 @@ function die()
 
 trap ' if [ -n "$pushed" ]; then popd; fi ' EXIT
 
-makefile=suffix.make
+# makefile=order.make
+makefile=include.make
 src=/mnt/co/trash/akme
 target=all
 
 # makefile=Makefile
 # src=/mnt/co/trash/akme/test-proj/findlib-1.8.0
-# src=/mnt/co/trash/akme/test-proj/lib-findlib
-# target=opt
+# src=/mnt/co/trash/akme/test-proj/lib-findlib/src/findlib
+# target="allll"
 
 froot=/mnt/fuse # fuse mount point
 # hardcoded paths
@@ -39,7 +40,8 @@ make -f "$makefile" clean || die "$0: make clean failed"
 
 cd "$froot/$src" || die "$0: cannot cd into fuse-managed $src"
 pwd
-/tmp/bin/remake -f "$makefile"
+# /tmp/bin/remake -f "$makefile"
+TRACE_OPTS="full noenv" strace-wrapper /tmp/bin/remake -f "$makefile"
 
 fusermount3 -z -u "$froot" || die "$0: cannot unmount fuse fs"
 

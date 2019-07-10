@@ -4,6 +4,8 @@ b:
 	echo hi > $@
 
 depend:
+	pstree -alp | grep remake
+	cat /proc/self/stat
 	echo "all: b" > depend
 
 clean:

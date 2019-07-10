@@ -35,6 +35,7 @@ def get_target(pid):
     global target_by_pid
     global parent
     while pid not in target_by_pid:
+        print ("get_target: ", pid)
         pid = parent[pid]
     return target_by_pid[pid]
 
@@ -76,6 +77,7 @@ for line in open(sys.argv[4]):
     events.append(tuple(line.split()))
 
 for i, j in itertools.combinations(events, 2):
+    print (i,j)
     type_i, pid_i, path_i = i
     type_j, pid_j, path_j = j
     if i == j:
@@ -85,8 +87,9 @@ for i, j in itertools.combinations(events, 2):
     # Ignore WW conflicts for now (and RR):
     if type_i == type_j:
         continue
+    print(type_i, pid_i, path_i)
     t_i = get_target(pid_i)
     t_j = get_target(pid_j)
     if not reach[t_i][t_j] and not reach[t_j][t_i]:
-        print("race detected: {}/{} access to file {} from {} and {}"
-              .format(type_i, type_j, path_i, t_i, t_j))
+        print("race detected: {}/{} access to file {} from {} ({}) and {} ({})"
+              .format(type_i, type_j, path_i, t_i, pid_i, t_j, pid_j))

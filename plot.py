@@ -19,11 +19,11 @@ for line in open(sys.argv[1]):
 
 
 try:
-    # print("digraph G {")
+    print("digraph G {")
     for v in graph:
         for dest in graph[v]:
             print('"{}" -> "{}"'.format(v, dest))
-    # print("}")
+    print("}")
 except IOError as e:
     if e.errno == errno.EPIPE:
         pass
