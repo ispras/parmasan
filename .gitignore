@@ -1,7 +1,0 @@
-*
-!/order.logs/
-!/order.logs/*
-!.*
-!*.make
-!*.py
-!*.sh
