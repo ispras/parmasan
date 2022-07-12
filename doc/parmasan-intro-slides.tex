@@ -1,16 +1,22 @@
 \RequirePackage[l2tabu,orthodox]{nag}
 \documentclass[usenames,dvipsnames,compress]{beamer}
-\usepackage[english,russian]{babel}
-\usepackage{polyglossia}
-\setmainlanguage{russian}
 
-% \usepackage[T2A]{fontenc}
-\usepackage[OT2, T1]{fontenc}
-\usepackage[utf8]{inputenc}
-% \usepackage[english,russian]{babel}
+%% For xelatex
+\usepackage{fontspec}
+    \defaultfontfeatures{Ligatures={TeX}}
+    \setmainfont{CMU Serif}
+    \setsansfont{CMU Sans Serif}
+    \setmonofont{Inconsolata}
+\usepackage[english,main=russian]{babel}
 
-\usepackage{newtxtext}
-\usepackage{newtxmath}
+% for pdflatex
+%% \usepackage[T1,T2A]{fontenc}
+%% \usepackage[utf8]{inputenc}
+%% \usepackage[english,main=russian]{babel}
+%% \usepackage{newtxtext}
+%% \usepackage{newtxmath}
+
+
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{tabu}
