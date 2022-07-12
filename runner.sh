@@ -10,12 +10,12 @@ trap ' if [ -n "$pushed" ]; then popd; fi ' EXIT
 
 # makefile=order.make
 makefile=include.make
-src=/mnt/co/trash/akme
+src=/mnt/co/parmasan
 target=all
 
 # makefile=Makefile
-# src=/mnt/co/trash/akme/test-proj/findlib-1.8.0
-# src=/mnt/co/trash/akme/test-proj/lib-findlib/src/findlib
+# src=/mnt/co/parmasan/test-proj/findlib-1.8.0
+# src=/mnt/co/parmasan/test-proj/lib-findlib/src/findlib
 # target="allll"
 
 froot=/mnt/fuse # fuse mount point
