@@ -35,9 +35,11 @@ void tracer_process::report_file_open(int fd, const char* process_addr) {
 
     m_opened_files[fd] = tracer_process_file { std::move(name), get_inode_for_fd(fd), true, false, false };
 
+#ifdef DEBUG
     printf("[%d]: Opened file ", m_pid);
     debug_file_info(fd);        
     printf("\n");
+#endif
 }
 
 void tracer_process::report_file_close(int fd) {
@@ -93,7 +95,7 @@ int64_t tracer_process::get_syscall_return_code() {
     exit_from_syscall();
     if(!stopped_at_syscall()) {
         // Perhaps, it happened to be a faulty syscall
-        // and so the process got terminated
+        // so the process got terminated
         return -1;
     }
 

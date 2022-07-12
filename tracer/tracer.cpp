@@ -42,7 +42,11 @@ void tracer::parent_task() {
 }
 
 void tracer::bpf_loop() {
-	ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, PTRACE_O_TRACESECCOMP | PTRACE_O_TRACESYSGOOD);
+	ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, PTRACE_O_TRACESECCOMP |
+											PTRACE_O_TRACESYSGOOD |
+											PTRACE_O_TRACEFORK |
+	                                        PTRACE_O_TRACEVFORK |
+	                                        PTRACE_O_TRACECLONE);
 	
 	int status = 0;
 	tracer_process* process = get_process(m_child_pid);
@@ -97,11 +101,11 @@ void tracer::setup_seccomp() {
     std::vector<unsigned int> syscalls_to_trace;
 
     syscalls_to_trace.push_back(__NR_write);
-    // syscalls_to_trace.push_back(__NR_read);
+    syscalls_to_trace.push_back(__NR_read);
 
 #ifdef DEBUG_FILE_PATHS
-    // syscalls_to_trace.push_back(__NR_open);
-    // syscalls_to_trace.push_back(__NR_openat);
+    syscalls_to_trace.push_back(__NR_open);
+    syscalls_to_trace.push_back(__NR_openat);
 #endif
 
     syscalls_to_trace.push_back(__NR_close);

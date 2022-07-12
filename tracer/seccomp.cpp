@@ -6,6 +6,7 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <cstdio>
+#include <cstddef>
 
 static bool set_filter(struct sock_fprog* prog) {
 	if(prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
@@ -29,7 +30,7 @@ bool seccomp_filter_syscalls(const std::vector<unsigned int>& syscalls_to_trace)
 	}
 
 	filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
-	filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRACE | SECCOMP_RET_DATA));
+	filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRACE));
 
     struct sock_fprog prog = { (unsigned short)filter.size(), filter.data() };
     return set_filter(&prog);
