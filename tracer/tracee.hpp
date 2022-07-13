@@ -57,15 +57,20 @@ class tracee {
 
     tracee_file* get_file(int fd);
 
+    bool stopped_at_fork_or_clone();
+    bool stopped_at_exec();
     bool stopped_at_seccomp();
     bool stopped_at_syscall();
     bool stopped_at_signal();
-    bool exitted();
+    unsigned long ptrace_get_event_message();
 
     void ptrace_get_registers(struct user_regs_struct* regs);
     void ptrace_continue();
     void ptrace_continue_to_syscall();
     void ptrace_detach();
+
+    void inherit_opened_files_from(tracee* parent);
+    void filter_opened_files();
 
     void wait();
 

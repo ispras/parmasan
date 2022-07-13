@@ -44,7 +44,7 @@ class tracer {
 
     void setup_seccomp();
 
-    /* MARK: Syscall handlers */
+    /* MARK: Syscall and fork handlers */
 
     void handle_open_syscall(tracee* process, const char* pathname /*, int flags, mode_t mode*/);
     void handle_openat_syscall(tracee* process, int dirfd,
@@ -53,6 +53,9 @@ class tracer {
     void handle_write_syscall(tracee* process, int fd, char* buf, uint64_t len);
     void handle_read_syscall(tracee* process, int fd, char* buf, uint64_t len);
     void handle_syscall(tracee* process);
+
+    void handle_fork_clone(tracee* process);
+    void handle_possible_fd_update(tracee* process);
 
     /* MARK: Utilities */
 

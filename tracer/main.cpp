@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 int main(int argc, char* argv[]) {
 
@@ -13,6 +14,7 @@ int main(int argc, char* argv[]) {
     }
 
     FILE* result_file = fopen("./tracer-result.txt", "w");
+    fcntl(fileno(result_file), F_SETFD, FD_CLOEXEC);
 
     tracer t(result_file);
     t.trace(argv + 1);

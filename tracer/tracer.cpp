@@ -49,7 +49,9 @@ void tracer::bpf_loop() {
     while ((process = wait_for_process())) {
         if (process->stopped_at_seccomp()) {
             handle_syscall(process);
-        }
+        } else {
+        	handle_possible_fd_update(process);
+       	}
 
         process->ptrace_continue();
     }
@@ -70,6 +72,8 @@ void tracer::ptrace_loop() {
             // end up being handled twice
 
             process->exit_from_syscall();
+        } else {
+        	handle_possible_fd_update(process);
         }
 
         process->ptrace_continue_to_syscall();
@@ -86,6 +90,7 @@ void tracer::child_task(char* argv[]) {
 
     execvp(argv[0], argv);
     perror("execvp");
+    exit(-1);
 }
 
 void tracer::setup_seccomp() {
@@ -163,7 +168,27 @@ void tracer::handle_syscall(tracee* process) {
     }
 }
 
+void tracer::handle_fork_clone(tracee* process) {
+    pid_t forked_pid = process->ptrace_get_event_message();
+    printf("forked %d\n", forked_pid);
+    tracee* forked_process = get_process(forked_pid);
+    forked_process->inherit_opened_files_from(process);
+}
+
 /* MARK: Utilities */
+
+void tracer::handle_possible_fd_update(tracee* process) {
+	if (process->stopped_at_fork_or_clone()) {
+        handle_fork_clone(process);
+    } else if (process->stopped_at_exec()) {
+    	
+    	// File descriptor may be asked to close
+    	// itself automatically when exec() ocurrs, so
+    	// filter such ones from m_opened_files array
+
+		process->filter_opened_files();
+    }
+}
 
 tracee* tracer::get_process(pid_t pid) {
     tracee* process = &processes[pid];

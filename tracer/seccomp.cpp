@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+#include <linux/audit.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 
@@ -21,6 +22,12 @@ static bool set_filter(struct sock_fprog* prog) {
 bool seccomp_filter_syscalls(const std::vector<unsigned int>& syscalls_to_trace) {
 
     std::vector<sock_filter> filter;
+
+    // Kill the process if it is not in 64-bit mode.
+
+    filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))));
+    filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0));
+    filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL));
 
     filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))));
 
