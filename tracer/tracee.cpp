@@ -115,7 +115,8 @@ bool tracee::stopped_at_fork_or_clone() {
         return false;
     }
 
-    int sig = WSTOPSIG(m_status);
+    int sig = m_status >> 8;
+
     return sig == (SIGTRAP | (PTRACE_EVENT_FORK << 8)) ||
            sig == (SIGTRAP | (PTRACE_EVENT_VFORK << 8)) ||
            sig == (SIGTRAP | (PTRACE_EVENT_CLONE << 8));
@@ -126,7 +127,7 @@ bool tracee::stopped_at_exec() {
         return false;
     }
 
-    int sig = WSTOPSIG(m_status);
+    int sig = m_status >> 8;
     return sig == (SIGTRAP | (PTRACE_EVENT_EXEC << 8));
 }
 
@@ -142,7 +143,7 @@ bool tracee::stopped_at_signal() {
     if (!WIFSTOPPED(m_status)) {
         return false;
     }
-    int sig = WSTOPSIG(m_status);
+    int sig = m_status >> 8;
     if (sig & ~0x7F) {
         return false;
     }
@@ -150,7 +151,11 @@ bool tracee::stopped_at_signal() {
     return sig != SIGTRAP && sig != SIGSTOP;
 }
 
-unsigned long tracee::ptrace_get_event_message() { return ptrace(PTRACE_GETEVENTMSG, m_pid, 0, 0); }
+unsigned long tracee::ptrace_get_event_message() {
+    unsigned long result = 0;
+    ptrace(PTRACE_GETEVENTMSG, m_pid, 0, &result);
+    return result;
+}
 
 void tracee::ptrace_get_registers(struct user_regs_struct* regs) {
     ptrace(PTRACE_GETREGS, m_pid, 0, regs);
@@ -184,7 +189,7 @@ void tracee::inherit_opened_files_from(tracee* parent) {
     // copy m_read_ocurred and m_write_ocurred flags,
     // which are intended to be unset.
 
-    for(int i = parent->m_opened_files.size(); i >= 0; i--) {
+    for(int i = parent->m_opened_files.size() - 1; i >= 0; i--) {
         tracee_file* parent_file = &parent->m_opened_files[i];
 
         if(!parent_file->m_opened) continue;

@@ -18,8 +18,8 @@ struct tracee_file {
 
     template <typename T>
     tracee_file(T&& path, ino_t inode, dev_t dev)
-        : m_path(std::forward<T>(path)), m_inode(inode), m_dev(dev) {}
-    tracee_file(ino_t inode, dev_t dev) : m_path({}), m_inode(inode), m_dev(dev) {}
+        : m_path(std::forward<T>(path)), m_inode(inode), m_dev(dev), m_opened(true) {}
+    tracee_file(ino_t inode, dev_t dev) : m_path({}), m_inode(inode), m_dev(dev), m_opened(true) {}
     tracee_file() : m_path({}), m_inode(-1), m_dev(-1), m_opened(false) {}
 
     std::string m_path;

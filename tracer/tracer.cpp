@@ -110,7 +110,7 @@ void tracer::setup_seccomp() {
 #ifdef DEBUG
     printf("Syscalls filtered by BPF: ");
     for (unsigned syscall : syscalls_to_trace) {
-        printf("%s ", SYS_NAMES[syscall]);
+        printf("%d ", syscall);
     }
     printf("\n");
 #endif
@@ -170,7 +170,6 @@ void tracer::handle_syscall(tracee* process) {
 
 void tracer::handle_fork_clone(tracee* process) {
     pid_t forked_pid = process->ptrace_get_event_message();
-    printf("forked %d\n", forked_pid);
     tracee* forked_process = get_process(forked_pid);
     forked_process->inherit_opened_files_from(process);
 }

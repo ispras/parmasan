@@ -31,7 +31,7 @@ class tracer {
     bool is_bpf_enabled();
 
     static constexpr int GENERAL_PTRACE_FLAGS =
-        PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
+        PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC;
 
   private:
     /* MARK: Private methods */
