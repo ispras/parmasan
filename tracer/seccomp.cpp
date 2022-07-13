@@ -1,6 +1,5 @@
 
 #include "seccomp.hpp"
-#include "syscalls.hpp"
 #include <cstddef>
 #include <cstdio>
 #include <linux/filter.h>

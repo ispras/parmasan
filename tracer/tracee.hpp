@@ -14,22 +14,30 @@
 
 class tracer;
 
-struct tracer_process_file {
+struct tracee_file {
+
+    template <typename T>
+    tracee_file(T&& path, ino_t inode, dev_t dev)
+        : m_path(std::forward<T>(path)), m_inode(inode), m_dev(dev) {}
+    tracee_file(ino_t inode, dev_t dev) : m_path({}), m_inode(inode), m_dev(dev) {}
+    tracee_file() : m_path({}), m_inode(-1), m_dev(-1), m_opened(false) {}
+
     std::string m_path;
     ino_t m_inode;
+    dev_t m_dev;
     bool m_opened;
-    bool m_read_occurred;
-    bool m_write_occurred;
+    bool m_read_occurred = false;
+    bool m_write_occurred = false;
 };
 
-class tracer_process {
+class tracee {
   public:
-    tracer_process() = default;
-    ~tracer_process() = default;
-    tracer_process(const tracer_process& copy) = delete;
-    tracer_process& operator=(const tracer_process& copy_assign) = delete;
-    tracer_process(tracer_process&& move) = default;
-    tracer_process& operator=(tracer_process& move_assign) = default;
+    tracee() = default;
+    ~tracee() = default;
+    tracee(const tracee& copy) = delete;
+    tracee& operator=(const tracee& copy_assign) = delete;
+    tracee(tracee&& move) = default;
+    tracee& operator=(tracee& move_assign) = default;
 
     bool initialized();
     void initialize(int pid, tracer* tracer);
@@ -47,7 +55,7 @@ class tracer_process {
     void exit_from_syscall();
     int64_t get_syscall_return_code();
 
-    tracer_process_file* get_file(int fd);
+    tracee_file* get_file(int fd);
 
     bool stopped_at_seccomp();
     bool stopped_at_syscall();
@@ -64,18 +72,16 @@ class tracer_process {
     int get_pid();
     int get_status();
 
-    static constexpr int DEFAULT_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
-
   private:
     /* MARK: Private methods */
 
-    bool ptrace_continue_with_request(enum __ptrace_request command);
-    tracer_process_file* ensure_file(int fd);
-    tracer_process_file* create_unnamed_file_for_fd(int fd);
+    void ptrace_continue_with_request(enum __ptrace_request command);
+    tracee_file* ensure_file(int fd);
+    tracee_file* create_unnamed_file_for_fd(int fd);
     void debug_file_info(int fd);
     void ensure_fd_valid(int fd);
 
-    ino_t get_inode_for_fd(int fd);
+    void get_stat_for_fd(int fd, struct stat* file_stat);
 
     uint64_t read_word(void* process_addr);
     std::string read_string(const char* process_addr);
@@ -86,7 +92,7 @@ class tracer_process {
     int m_status = -1;
 
     bool m_is_at_syscall_entry = false;
-    std::vector<tracer_process_file> m_opened_files = {};
+    std::vector<tracee_file> m_opened_files = {};
 
     tracer* m_tracer;
 };

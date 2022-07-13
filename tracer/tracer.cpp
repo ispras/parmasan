@@ -1,5 +1,6 @@
 
 #include "tracer.hpp"
+#include "tracee.hpp"
 
 void tracer::trace(char* argv[]) {
     m_bpf_enabled = seccomp_available();
@@ -19,12 +20,12 @@ void tracer::trace(char* argv[]) {
     }
 }
 
-void tracer::report_read(pid_t pid, ino_t inode) {
-    fprintf(m_result_file, "R %d %lu\n", pid, inode);
+void tracer::report_read(pid_t pid, tracee_file* file) {
+    fprintf(m_result_file, "R %d %lu:%lu\n", pid, file->m_dev, file->m_inode);
 }
 
-void tracer::report_write(pid_t pid, ino_t inode) {
-    fprintf(m_result_file, "W %d %lu\n", pid, inode);
+void tracer::report_write(pid_t pid, tracee_file* file) {
+    fprintf(m_result_file, "W %d %lu:%lu\n", pid, file->m_dev, file->m_inode);
 }
 
 bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
@@ -42,7 +43,7 @@ void tracer::parent_task() {
 void tracer::bpf_loop() {
     ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, tracer::GENERAL_PTRACE_FLAGS | PTRACE_O_TRACESECCOMP);
 
-    tracer_process* process = get_process(m_child_pid);
+    tracee* process = get_process(m_child_pid);
     process->ptrace_continue();
 
     while ((process = wait_for_process())) {
@@ -56,7 +57,7 @@ void tracer::bpf_loop() {
 
 void tracer::ptrace_loop() {
     ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, tracer::GENERAL_PTRACE_FLAGS);
-    tracer_process* process = get_process(m_child_pid);
+    tracee* process = get_process(m_child_pid);
     process->ptrace_continue_to_syscall();
 
     while ((process = wait_for_process())) {
@@ -114,29 +115,27 @@ void tracer::setup_seccomp() {
 
 /* MARK: Syscall handlers */
 
-void tracer::handle_open_syscall(tracer_process* process,
+void tracer::handle_open_syscall(tracee* process,
                                  const char* pathname /*, int flags, mode_t mode*/) {
     process->report_file_open(process->get_syscall_return_code(), pathname);
 }
 
-void tracer::handle_openat_syscall(tracer_process* process, int dirfd,
+void tracer::handle_openat_syscall(tracee* process, int dirfd,
                                    const char* pathname /*, int flags, mode_t mode*/) {
     process->report_file_open(process->get_syscall_return_code(), pathname);
 }
 
-void tracer::handle_close_syscall(tracer_process* process, int fd) {
-    process->report_file_close(fd);
-}
+void tracer::handle_close_syscall(tracee* process, int fd) { process->report_file_close(fd); }
 
-void tracer::handle_write_syscall(tracer_process* process, int fd, char* buf, uint64_t len) {
+void tracer::handle_write_syscall(tracee* process, int fd, char* buf, uint64_t len) {
     process->report_file_write(fd, len);
 }
 
-void tracer::handle_read_syscall(tracer_process* process, int fd, char* buf, uint64_t len) {
+void tracer::handle_read_syscall(tracee* process, int fd, char* buf, uint64_t len) {
     process->report_file_read(fd, len);
 }
 
-void tracer::handle_syscall(tracer_process* process) {
+void tracer::handle_syscall(tracee* process) {
     struct user_regs_struct state = {};
     process->ptrace_get_registers(&state);
     int syscall_num = state.orig_rax;
@@ -166,18 +165,18 @@ void tracer::handle_syscall(tracer_process* process) {
 
 /* MARK: Utilities */
 
-tracer_process* tracer::get_process(pid_t pid) {
-    tracer_process* process = &processes[pid];
+tracee* tracer::get_process(pid_t pid) {
+    tracee* process = &processes[pid];
     if (!process->initialized())
         process->initialize(pid, this);
     return process;
 }
 
-tracer_process* tracer::wait_for_process() {
+tracee* tracer::wait_for_process() {
     int status = -1;
     pid_t pid = wait(&status);
     if (pid > 0) {
-        tracer_process* process = get_process(pid);
+        tracee* process = get_process(pid);
         process->set_at_syscall_entry(status);
         return process;
     }

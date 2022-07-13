@@ -1,23 +1,23 @@
 
-#include "tracer_process.hpp"
+#include "tracee.hpp"
 #include "tracer.hpp"
 
-bool tracer_process::initialized() { return m_pid >= 0; }
+bool tracee::initialized() { return m_pid >= 0; }
 
-void tracer_process::initialize(int pid, tracer* tracer) {
+void tracee::initialize(int pid, tracer* tracer) {
     assert(m_pid == -1 && pid != -1);
     m_pid = pid;
     m_tracer = tracer;
 }
 
-void tracer_process::set_at_syscall_entry(int status) {
+void tracee::set_at_syscall_entry(int status) {
     m_status = status;
     m_is_at_syscall_entry = true;
 }
 
-bool tracer_process::is_at_syscall_entry() { return m_is_at_syscall_entry; }
+bool tracee::is_at_syscall_entry() { return m_is_at_syscall_entry; }
 
-void tracer_process::report_file_open(int fd, const char* process_addr) {
+void tracee::report_file_open(int fd, const char* process_addr) {
     std::string name = read_string(process_addr);
 
     if (fd < 0) {
@@ -29,8 +29,9 @@ void tracer_process::report_file_open(int fd, const char* process_addr) {
 
     ensure_fd_valid(fd);
 
-    m_opened_files[fd] =
-        tracer_process_file{std::move(name), get_inode_for_fd(fd), true, false, false};
+    struct stat file_stat {};
+    get_stat_for_fd(fd, &file_stat);
+    m_opened_files[fd] = tracee_file(std::move(name), file_stat.st_ino, file_stat.st_dev);
 
 #ifdef DEBUG
     printf("[%d]: Opened file ", m_pid);
@@ -39,19 +40,21 @@ void tracer_process::report_file_open(int fd, const char* process_addr) {
 #endif
 }
 
-void tracer_process::report_file_close(int fd) {
+void tracee::report_file_close(int fd) {
 #ifdef DEBUG
     printf("[%d]: Closed file ", m_pid);
     debug_file_info(fd);
     printf("\n");
 #endif
     if (get_file(fd)) {
-        m_opened_files[fd] = tracer_process_file{{}, (ino_t)0, false, false, false};
+        struct stat file_stat {};
+        get_stat_for_fd(fd, &file_stat);
+        m_opened_files[fd] = tracee_file();
     }
 }
 
-void tracer_process::report_file_read(int fd, uint64_t bytes) {
-    tracer_process_file* file = ensure_file(fd);
+void tracee::report_file_read(int fd, uint64_t bytes) {
+    tracee_file* file = ensure_file(fd);
 #ifdef DEBUG
     printf("[%d]: Reading %lu bytes from ", m_pid, bytes);
     debug_file_info(fd);
@@ -60,12 +63,12 @@ void tracer_process::report_file_read(int fd, uint64_t bytes) {
 
     if (file->m_read_occurred)
         return;
-    m_tracer->report_read(m_pid, file->m_inode);
+    m_tracer->report_read(m_pid, file);
     file->m_read_occurred = true;
 }
 
-void tracer_process::report_file_write(int fd, uint64_t bytes) {
-    tracer_process_file* file = ensure_file(fd);
+void tracee::report_file_write(int fd, uint64_t bytes) {
+    tracee_file* file = ensure_file(fd);
 #ifdef DEBUG
     printf("[%d]: Writing %lu bytes to ", m_pid, bytes);
     debug_file_info(fd);
@@ -74,11 +77,11 @@ void tracer_process::report_file_write(int fd, uint64_t bytes) {
 
     if (file->m_write_occurred)
         return;
-    m_tracer->report_write(m_pid, file->m_inode);
+    m_tracer->report_write(m_pid, file);
     file->m_write_occurred = true;
 }
 
-void tracer_process::exit_from_syscall() {
+void tracee::exit_from_syscall() {
     if (!m_is_at_syscall_entry)
         return;
 
@@ -86,7 +89,7 @@ void tracer_process::exit_from_syscall() {
     wait();
 }
 
-int64_t tracer_process::get_syscall_return_code() {
+int64_t tracee::get_syscall_return_code() {
     exit_from_syscall();
     if (!stopped_at_syscall()) {
         // Perhaps, it happened to be a faulty syscall
@@ -99,24 +102,24 @@ int64_t tracer_process::get_syscall_return_code() {
     return state.rax;
 }
 
-tracer_process_file* tracer_process::get_file(int fd) {
+tracee_file* tracee::get_file(int fd) {
     if (fd < m_opened_files.size() && m_opened_files[fd].m_opened) {
         return &m_opened_files[fd];
     }
     return nullptr;
 }
 
-bool tracer_process::exitted() { return WIFEXITED(m_status); }
+bool tracee::exitted() { return WIFEXITED(m_status); }
 
-bool tracer_process::stopped_at_seccomp() {
+bool tracee::stopped_at_seccomp() {
     return (m_status >> 8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8))) != 0;
 }
 
-bool tracer_process::stopped_at_syscall() {
+bool tracee::stopped_at_syscall() {
     return WIFSTOPPED(m_status) && (WSTOPSIG(m_status) & 0x80) != 0;
 }
 
-bool tracer_process::stopped_at_signal() {
+bool tracee::stopped_at_signal() {
     if (!WIFSTOPPED(m_status)) {
         return false;
     }
@@ -128,19 +131,15 @@ bool tracer_process::stopped_at_signal() {
     return sig != SIGTRAP && sig != SIGSTOP;
 }
 
-void tracer_process::ptrace_get_registers(struct user_regs_struct* regs) {
+void tracee::ptrace_get_registers(struct user_regs_struct* regs) {
     ptrace(PTRACE_GETREGS, m_pid, 0, regs);
 }
 
-void tracer_process::ptrace_continue() {
-    ptrace_continue_with_request(PTRACE_CONT);
-}
+void tracee::ptrace_continue() { ptrace_continue_with_request(PTRACE_CONT); }
 
-void tracer_process::ptrace_continue_to_syscall() {
-    ptrace_continue_with_request(PTRACE_SYSCALL);
-}
+void tracee::ptrace_continue_to_syscall() { ptrace_continue_with_request(PTRACE_SYSCALL); }
 
-void tracer_process::ptrace_continue_with_request(enum __ptrace_request request) {
+void tracee::ptrace_continue_with_request(enum __ptrace_request request) {
     if (stopped_at_signal()) {
         ptrace(request, m_pid, nullptr, WSTOPSIG(m_status));
     } else {
@@ -149,28 +148,30 @@ void tracer_process::ptrace_continue_with_request(enum __ptrace_request request)
 
     m_status = -1;
     m_is_at_syscall_entry = false;
-}   
+}
 
-void tracer_process::ptrace_detach() {
+void tracee::ptrace_detach() {
     m_status = -1;
     m_is_at_syscall_entry = false;
     ptrace(PTRACE_DETACH, m_pid, nullptr, nullptr);
 }
 
-void tracer_process::wait() { waitpid(m_pid, &m_status, 0); }
+void tracee::wait() { waitpid(m_pid, &m_status, 0); }
 
-tracer_process_file* tracer_process::ensure_file(int fd) {
-    tracer_process_file* file = get_file(fd);
+tracee_file* tracee::ensure_file(int fd) {
+    tracee_file* file = get_file(fd);
     if (!file) {
         return create_unnamed_file_for_fd(fd);
     }
     return file;
 }
 
-tracer_process_file* tracer_process::create_unnamed_file_for_fd(int fd) {
+tracee_file* tracee::create_unnamed_file_for_fd(int fd) {
     ensure_fd_valid(fd);
 
-    m_opened_files[fd] = tracer_process_file{{}, get_inode_for_fd(fd), true, false, false};
+    struct stat file_stat {};
+    get_stat_for_fd(fd, &file_stat);
+    m_opened_files[fd] = tracee_file(file_stat.st_ino, file_stat.st_dev);
 
 #ifdef DEBUG
     printf("[%d]: Implicitly opened file ", m_pid);
@@ -180,8 +181,8 @@ tracer_process_file* tracer_process::create_unnamed_file_for_fd(int fd) {
     return &m_opened_files[fd];
 }
 
-void tracer_process::debug_file_info(int fd) {
-    tracer_process_file* file = get_file(fd);
+void tracee::debug_file_info(int fd) {
+    tracee_file* file = get_file(fd);
     printf("fd=%d", fd);
     if (file) {
         printf(" inode=%lu", file->m_inode);
@@ -191,7 +192,7 @@ void tracer_process::debug_file_info(int fd) {
     }
 }
 
-void tracer_process::ensure_fd_valid(int fd) {
+void tracee::ensure_fd_valid(int fd) {
     int new_size = m_opened_files.size();
 
     while (fd >= new_size) {
@@ -206,19 +207,16 @@ void tracer_process::ensure_fd_valid(int fd) {
     m_opened_files.resize(new_size);
 }
 
-ino_t tracer_process::get_inode_for_fd(int fd) {
-    struct stat file_stat {};
+void tracee::get_stat_for_fd(int fd, struct stat* file_stat) {
     std::stringstream stat_path_stream;
 
     stat_path_stream << "/proc/" << m_pid << "/fd/" << fd;
     std::string stat_path = stat_path_stream.str();
 
-    stat(stat_path.c_str(), &file_stat);
-
-    return file_stat.st_ino;
+    stat(stat_path.c_str(), file_stat);
 }
 
-uint64_t tracer_process::read_word(void* process_addr) {
+uint64_t tracee::read_word(void* process_addr) {
     uint64_t word = ptrace(PTRACE_PEEKTEXT, m_pid, process_addr, NULL);
     if (errno) {
         perror("PTRACE_PEEKTEXT");
@@ -227,7 +225,7 @@ uint64_t tracer_process::read_word(void* process_addr) {
     return word;
 }
 
-std::string tracer_process::read_string(const char* process_addr) {
+std::string tracee::read_string(const char* process_addr) {
     uint64_t block_addr = (uint64_t)process_addr;
     unsigned char_index = (unsigned)(block_addr % 8);
     block_addr -= char_index;
@@ -252,6 +250,6 @@ std::string tracer_process::read_string(const char* process_addr) {
     }
 }
 
-int tracer_process::get_pid() { return m_pid; }
+int tracee::get_pid() { return m_pid; }
 
-int tracer_process::get_status() { return m_status; }
+int tracee::get_status() { return m_status; }
