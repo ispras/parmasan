@@ -64,5 +64,5 @@ class tracer {
     FILE* m_result_file;
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;
-    std::unordered_map<int, tracee> processes{};
+    std::unordered_map<pid_t, tracee> processes{};
 };
