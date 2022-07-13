@@ -1,13 +1,13 @@
 
+#include "tracer.hpp"
 #include <cstdio>
 #include <signal.h>
-#include <sys/wait.h>
 #include <sys/resource.h>
-#include "tracer.hpp"
+#include <sys/wait.h>
 
 int main(int argc, char* argv[]) {
 
-    if(argc < 2) {
+    if (argc < 2) {
         printf("Please, specify which program to trace\n");
         return 0;
     }
@@ -18,6 +18,6 @@ int main(int argc, char* argv[]) {
     t.trace(argv + 1);
 
     fclose(result_file);
-    
+
     return 0;
 }

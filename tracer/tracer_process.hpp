@@ -1,15 +1,15 @@
 #pragma once
 
-#include <sys/ptrace.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/user.h>
-#include <inttypes.h>
-#include <cstdlib>
+#include <cassert>
 #include <cerrno>
 #include <cstdio>
-#include <cassert>
+#include <cstdlib>
+#include <inttypes.h>
 #include <sstream>
+#include <sys/ptrace.h>
+#include <sys/stat.h>
+#include <sys/user.h>
+#include <sys/wait.h>
 #include <vector>
 
 class tracer;
@@ -23,8 +23,7 @@ struct tracer_process_file {
 };
 
 class tracer_process {
-public:
-
+  public:
     tracer_process() = default;
     ~tracer_process() = default;
     tracer_process(const tracer_process& copy) = delete;
@@ -65,8 +64,7 @@ public:
     int get_pid();
     int get_status();
 
-private:
-
+  private:
     /* MARK: Private methods */
 
     tracer_process_file* ensure_file(int fd);
