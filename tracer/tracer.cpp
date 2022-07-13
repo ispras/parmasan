@@ -19,9 +19,13 @@ void tracer::trace(char* argv[]) {
     }
 }
 
-void tracer::report_read(int pid, ino_t inode) { fprintf(result_file, "R %d %lu\n", pid, inode); }
+void tracer::report_read(pid_t pid, ino_t inode) {
+    fprintf(m_result_file, "R %d %lu\n", pid, inode);
+}
 
-void tracer::report_write(int pid, ino_t inode) { fprintf(result_file, "W %d %lu\n", pid, inode); }
+void tracer::report_write(pid_t pid, ino_t inode) {
+    fprintf(m_result_file, "W %d %lu\n", pid, inode);
+}
 
 bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 
@@ -36,9 +40,7 @@ void tracer::parent_task() {
 }
 
 void tracer::bpf_loop() {
-    ptrace(PTRACE_SETOPTIONS, m_child_pid, 0,
-           PTRACE_O_TRACESECCOMP | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK |
-               PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE);
+    ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, tracer::GENERAL_PTRACE_FLAGS | PTRACE_O_TRACESECCOMP);
 
     tracer_process* process = get_process(m_child_pid);
     process->ptrace_continue();
@@ -53,8 +55,7 @@ void tracer::bpf_loop() {
 }
 
 void tracer::ptrace_loop() {
-    ptrace(PTRACE_SETOPTIONS, m_child_pid, 0,
-           PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE);
+    ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, tracer::GENERAL_PTRACE_FLAGS);
     tracer_process* process = get_process(m_child_pid);
     process->ptrace_continue_to_syscall();
 
@@ -165,7 +166,7 @@ void tracer::handle_syscall(tracer_process* process) {
 
 /* MARK: Utilities */
 
-tracer_process* tracer::get_process(int pid) {
+tracer_process* tracer::get_process(pid_t pid) {
     tracer_process* process = &processes[pid];
     if (!process->initialized())
         process->initialize(pid, this);
@@ -174,7 +175,7 @@ tracer_process* tracer::get_process(int pid) {
 
 tracer_process* tracer::wait_for_process() {
     int status = -1;
-    int pid = wait(&status);
+    pid_t pid = wait(&status);
     if (pid > 0) {
         tracer_process* process = get_process(pid);
         process->set_at_syscall_entry(status);

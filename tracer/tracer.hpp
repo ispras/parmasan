@@ -15,7 +15,7 @@
 
 class tracer {
   public:
-    tracer(FILE* result_file) : result_file(result_file) {}
+    tracer(FILE* result_file) : m_result_file(result_file) {}
     ~tracer() = default;
     tracer(const tracer& copy) = delete;
     tracer& operator=(const tracer& copy_assign) = delete;
@@ -24,8 +24,8 @@ class tracer {
 
     void trace(char* argv[]);
 
-    void report_read(int pid, ino_t inode);
-    void report_write(int pid, ino_t inode);
+    void report_read(pid_t pid, ino_t inode);
+    void report_write(pid_t pid, ino_t inode);
 
     bool is_bpf_enabled();
 
@@ -53,12 +53,12 @@ class tracer {
 
     /* MARK: Utilities */
 
-    tracer_process* get_process(int pid);
+    tracer_process* get_process(pid_t pid);
     tracer_process* wait_for_process();
 
     /* MARK: Private fields */
 
-    FILE* result_file;
+    FILE* m_result_file;
     int m_child_pid = -1;
     bool m_bpf_enabled = true;
     std::unordered_map<int, tracer_process> processes{};

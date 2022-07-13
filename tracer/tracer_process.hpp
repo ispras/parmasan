@@ -64,9 +64,12 @@ class tracer_process {
     int get_pid();
     int get_status();
 
+    static constexpr int DEFAULT_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE;
+
   private:
     /* MARK: Private methods */
 
+    bool ptrace_continue_with_request(enum __ptrace_request command);
     tracer_process_file* ensure_file(int fd);
     tracer_process_file* create_unnamed_file_for_fd(int fd);
     void debug_file_info(int fd);

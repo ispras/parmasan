@@ -133,26 +133,23 @@ void tracer_process::ptrace_get_registers(struct user_regs_struct* regs) {
 }
 
 void tracer_process::ptrace_continue() {
-    if (stopped_at_signal()) {
-        ptrace(PTRACE_CONT, m_pid, 0, WSTOPSIG(m_status));
-    } else {
-        ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
-    }
-
-    m_status = -1;
-    m_is_at_syscall_entry = false;
+    ptrace_continue_with_request(PTRACE_CONT);
 }
 
 void tracer_process::ptrace_continue_to_syscall() {
+    ptrace_continue_with_request(PTRACE_SYSCALL);
+}
+
+void tracer_process::ptrace_continue_with_request(enum __ptrace_request request) {
     if (stopped_at_signal()) {
-        ptrace(PTRACE_SYSCALL, m_pid, 0, WSTOPSIG(m_status));
+        ptrace(request, m_pid, nullptr, WSTOPSIG(m_status));
     } else {
-        ptrace(PTRACE_SYSCALL, m_pid, nullptr, nullptr);
+        ptrace(request, m_pid, nullptr, nullptr);
     }
 
     m_status = -1;
     m_is_at_syscall_entry = false;
-}
+}   
 
 void tracer_process::ptrace_detach() {
     m_status = -1;
