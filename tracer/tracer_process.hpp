@@ -52,12 +52,18 @@ public:
 
     bool stopped_at_seccomp();
     bool stopped_at_syscall();
+    bool stopped_at_signal();
+    bool exitted();
 
     void ptrace_get_registers(struct user_regs_struct* regs);
     void ptrace_continue();
     void ptrace_continue_to_syscall();
+    void ptrace_detach();
 
     void wait();
+
+    int get_pid();
+    int get_status();
 
 private:
 

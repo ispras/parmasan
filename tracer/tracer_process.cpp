@@ -84,11 +84,6 @@ void tracer_process::exit_from_syscall() {
 
     ptrace_continue_to_syscall();
     wait();
- //    if(m_tracer->is_bpf_enabled()) {
-	//    	if(!stopped_at_syscall()) return;
-	//     ptrace_continue_to_syscall();
-	//     wait();
-	// }
 }
 
 int64_t tracer_process::get_syscall_return_code() {
@@ -111,6 +106,10 @@ tracer_process_file* tracer_process::get_file(int fd) {
     return nullptr;
 }
 
+bool tracer_process::exitted() {
+    return WIFEXITED(m_status);
+}
+
 bool tracer_process::stopped_at_seccomp() {
     return (m_status >> 8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8))) != 0;
 }
@@ -119,20 +118,48 @@ bool tracer_process::stopped_at_syscall() {
     return WIFSTOPPED(m_status) && (WSTOPSIG(m_status) & 0x80) != 0;
 }
 
+bool tracer_process::stopped_at_signal() {
+    if(!WIFSTOPPED(m_status)) {
+        return false;
+    }
+    int sig = WSTOPSIG(m_status);
+    if(sig & ~0x7F) {
+        return false;
+    }
+
+    return sig != SIGTRAP && sig != SIGSTOP;
+}
+
 void tracer_process::ptrace_get_registers(struct user_regs_struct* regs) {
     ptrace(PTRACE_GETREGS, m_pid, 0, regs);
 }
 
 void tracer_process::ptrace_continue() {
+    if(stopped_at_signal()) {
+        ptrace(PTRACE_CONT, m_pid, 0, WSTOPSIG(m_status));
+    } else {
+        ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
+    }
+
     m_status = -1;
     m_is_at_syscall_entry = false;
-    ptrace(PTRACE_CONT, m_pid, nullptr, nullptr);
 }
 
 void tracer_process::ptrace_continue_to_syscall() {
+    if(stopped_at_signal()) {
+        ptrace(PTRACE_SYSCALL, m_pid, 0, WSTOPSIG(m_status));
+    } else {
+        ptrace(PTRACE_SYSCALL, m_pid, nullptr, nullptr);
+    }
+
     m_status = -1;
     m_is_at_syscall_entry = false;
-    ptrace(PTRACE_SYSCALL, m_pid, nullptr, nullptr);
+}
+
+void tracer_process::ptrace_detach() {
+    m_status = -1;
+    m_is_at_syscall_entry = false;
+    ptrace(PTRACE_DETACH, m_pid, nullptr, nullptr);
 }
 
 void tracer_process::wait() {
@@ -228,4 +255,12 @@ std::string tracer_process::read_string(const char* process_addr) {
         block_addr += 8;
         char_index = 0;
     }
+}
+
+int tracer_process::get_pid() {
+    return m_pid;
+}
+
+int tracer_process::get_status() {
+    return m_status;
 }

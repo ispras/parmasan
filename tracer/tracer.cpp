@@ -48,37 +48,36 @@ void tracer::bpf_loop() {
 	                                        PTRACE_O_TRACEVFORK |
 	                                        PTRACE_O_TRACECLONE);
 	
-	int status = 0;
 	tracer_process* process = get_process(m_child_pid);
 	process->ptrace_continue();
 
     while((process = wait_for_process())) {
-		if (process->stopped_at_seccomp()) {
+		if(process->stopped_at_seccomp()) {
             handle_syscall(process);
         }
 
-        process->ptrace_continue();
+       	process->ptrace_continue();
     }
 }
 
 void tracer::ptrace_loop() {
 	ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, PTRACE_O_TRACESYSGOOD |
-	                                        PTRACE_O_TRACEFORK |
-	                                        PTRACE_O_TRACEVFORK |
-	                                        PTRACE_O_TRACECLONE);
-	int status = 0;
+											  PTRACE_O_TRACEFORK |
+											  PTRACE_O_TRACEVFORK |
+											  PTRACE_O_TRACECLONE);
 	tracer_process* process = get_process(m_child_pid);
-	get_process(m_child_pid)->ptrace_continue_to_syscall();
+	process->ptrace_continue_to_syscall();
 
     while((process = wait_for_process())) {
-	    if (process->stopped_at_syscall()) {
+	    if(process->stopped_at_syscall()) {
 	        handle_syscall(process);
 
-	        // It's necessary to exit from syscall
+   			// It's necessary to exit from syscall
 	        // explicitly when in pure-ptrace mode,
 	        // since otherwise some syscalls will
 	        // end up being handled twice
-	        process->exit_from_syscall();
+
+   			process->exit_from_syscall();
 	    }
 
         process->ptrace_continue_to_syscall();
@@ -87,6 +86,7 @@ void tracer::ptrace_loop() {
 
 void tracer::child_task(char* argv[]) {
 	ptrace(PTRACE_TRACEME, 0, 0, 0);
+	raise(SIGSTOP);
 
 	if(m_bpf_enabled) {
 		setup_seccomp();
