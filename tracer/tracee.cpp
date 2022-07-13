@@ -144,11 +144,8 @@ bool tracee::stopped_at_signal() {
         return false;
     }
     int sig = m_status >> 8;
-    if (sig & ~0x7F) {
-        return false;
-    }
 
-    return sig != SIGTRAP && sig != SIGSTOP;
+    return (sig & ~0x7F) == 0;
 }
 
 unsigned long tracee::ptrace_get_event_message() {
