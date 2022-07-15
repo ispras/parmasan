@@ -10,6 +10,7 @@
 #include <sys/syscall.h>
 #include <sys/user.h>
 #include <unistd.h>
+#include <cassert>
 
 void tracer::trace(char* argv[]) {
     m_bpf_enabled = seccomp_available();
@@ -133,7 +134,8 @@ void tracer::setup_seccomp() {
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW), BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRACE)};
 
     struct sock_fprog prog = {sizeof(filter) / sizeof(*filter), filter};
-    assert(set_seccomp_filter(&prog));
+    bool filter_set_success = set_seccomp_filter(&prog);
+    assert(filter_set_success);
 }
 
 /* MARK: Syscall handlers */

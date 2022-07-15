@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <linux/elf.h>
 #include <sys/uio.h>
+#include <cassert>
 
 bool tracee::initialized() { return m_pid >= 0; }
 
