@@ -33,7 +33,7 @@ bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 void tracer::parent_task() {
     wait(nullptr);
     m_result_file = fopen(m_result_file_path, "w");
-    if(!m_result_file) {
+    if (!m_result_file) {
         perror("Failed to open result file");
         kill(m_child_pid, SIGKILL);
         printf("Aborting.\n");
