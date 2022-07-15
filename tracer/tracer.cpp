@@ -152,7 +152,13 @@ void tracer::handle_read_syscall(tracee* process, int fd, char* buf, uint64_t le
 
 void tracer::handle_syscall(tracee* process) {
     struct user_regs_struct state = {};
-    process->ptrace_get_registers(&state);
+
+    // Kill the process if architecture is not x86-64
+    if(!process->ptrace_get_registers(&state)) {
+        kill(process->get_pid(), SIGKILL);
+        return;
+    }
+
     int syscall_num = state.orig_rax;
 
     switch (syscall_num) {

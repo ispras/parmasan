@@ -64,7 +64,7 @@ class tracee {
     bool stopped_at_signal();
     unsigned long ptrace_get_event_message();
 
-    void ptrace_get_registers(struct user_regs_struct* regs);
+    bool ptrace_get_registers(struct user_regs_struct* regs);
     void ptrace_continue();
     void ptrace_continue_to_syscall();
     void ptrace_detach();

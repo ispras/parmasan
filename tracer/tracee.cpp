@@ -2,6 +2,8 @@
 #include "tracee.hpp"
 #include "tracer.hpp"
 #include <dirent.h>
+#include <sys/uio.h>
+#include <linux/elf.h>
 
 bool tracee::initialized() { return m_pid >= 0; }
 
@@ -154,8 +156,14 @@ unsigned long tracee::ptrace_get_event_message() {
     return result;
 }
 
-void tracee::ptrace_get_registers(struct user_regs_struct* regs) {
-    ptrace(PTRACE_GETREGS, m_pid, 0, regs);
+bool tracee::ptrace_get_registers(struct user_regs_struct* regs) {
+    struct iovec io;
+    io.iov_base = regs;
+    io.iov_len = sizeof(*regs);
+
+    ptrace(PTRACE_GETREGSET, m_pid, NT_PRSTATUS, &io);
+
+    return io.iov_len == sizeof(*regs);
 }
 
 void tracee::ptrace_continue() { ptrace_continue_with_request(PTRACE_CONT); }
