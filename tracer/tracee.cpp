@@ -123,7 +123,7 @@ bool tracee::stopped_at_fork_or_clone() {
 }
 
 bool tracee::stopped_at_exec() {
-    if(!WIFSTOPPED(m_status)) {
+    if (!WIFSTOPPED(m_status)) {
         return false;
     }
 
@@ -144,11 +144,8 @@ bool tracee::stopped_at_signal() {
         return false;
     }
     int sig = m_status >> 8;
-    if (sig & ~0x7F) {
-        return false;
-    }
 
-    return sig != SIGTRAP && sig != SIGSTOP;
+    return (sig & ~0x7F) == 0;
 }
 
 unsigned long tracee::ptrace_get_event_message() {
@@ -189,12 +186,14 @@ void tracee::inherit_opened_files_from(tracee* parent) {
     // copy m_read_ocurred and m_write_ocurred flags,
     // which are intended to be unset.
 
-    for(int i = parent->m_opened_files.size() - 1; i >= 0; i--) {
+    for (int i = parent->m_opened_files.size() - 1; i >= 0; i--) {
         tracee_file* parent_file = &parent->m_opened_files[i];
 
-        if(!parent_file->m_opened) continue;
+        if (!parent_file->m_opened)
+            continue;
 
-        m_opened_files[i] = tracee_file(parent_file->m_path, parent_file->m_inode, parent_file->m_dev);
+        m_opened_files[i] =
+            tracee_file(parent_file->m_path, parent_file->m_inode, parent_file->m_dev);
     }
 }
 
@@ -204,30 +203,32 @@ void tracee::filter_opened_files() {
     stat_path_stream << "/proc/" << m_pid << "/fd";
     std::string stat_path = stat_path_stream.str();
 
-    struct dirent *entry;
+    struct dirent* entry;
     DIR* dir = opendir(stat_path.c_str());
 
-    if(!dir) return;
+    if (!dir)
+        return;
 
-    for(tracee_file& file : m_opened_files) file.m_opened = false;
+    for (tracee_file& file : m_opened_files)
+        file.m_opened = false;
 
     while ((entry = readdir(dir)) != NULL) {
         char* end = NULL;
         int fd_index = strtol(entry->d_name, &end, 10);
 
         // Ensure that dir->d_name is a valid base-10 number
-        if(*end != '\0') {
+        if (*end != '\0') {
             continue;
         }
-        
+
         ensure_file(fd_index)->m_opened = true;
     }
     closedir(dir);
 
 #ifdef DEBUG_FILE_PATHS
 
-    for(tracee_file& file : m_opened_files) {
-        if(!file.m_opened && !file.m_path.empty) {
+    for (tracee_file& file : m_opened_files) {
+        if (!file.m_opened && !file.m_path.empty) {
             file.m_path = {}
         }
     }

@@ -1,10 +1,9 @@
-
 #include "tracer.hpp"
 #include <cstdio>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
-#include <fcntl.h>
 
 int main(int argc, char* argv[]) {
 
@@ -13,13 +12,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    FILE* result_file = fopen("./tracer-result.txt", "w");
-    fcntl(fileno(result_file), F_SETFD, FD_CLOEXEC);
-
-    tracer t(result_file);
+    tracer t("./tracer-result.txt");
     t.trace(argv + 1);
-
-    fclose(result_file);
 
     return 0;
 }

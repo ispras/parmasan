@@ -32,12 +32,22 @@ bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 
 void tracer::parent_task() {
     wait(nullptr);
+    m_result_file = fopen(m_result_file_path, "w");
+    if(!m_result_file) {
+        perror("Failed to open result file");
+        kill(m_child_pid, SIGKILL);
+        printf("Aborting.\n");
+        return;
+    }
 
     if (m_bpf_enabled) {
         bpf_loop();
     } else {
         ptrace_loop();
     }
+
+    fclose(m_result_file);
+    m_result_file = nullptr;
 }
 
 void tracer::bpf_loop() {
@@ -50,8 +60,8 @@ void tracer::bpf_loop() {
         if (process->stopped_at_seccomp()) {
             handle_syscall(process);
         } else {
-        	handle_possible_fd_update(process);
-       	}
+            handle_possible_fd_update(process);
+        }
 
         process->ptrace_continue();
     }
@@ -73,7 +83,7 @@ void tracer::ptrace_loop() {
 
             process->exit_from_syscall();
         } else {
-        	handle_possible_fd_update(process);
+            handle_possible_fd_update(process);
         }
 
         process->ptrace_continue_to_syscall();
@@ -177,15 +187,15 @@ void tracer::handle_fork_clone(tracee* process) {
 /* MARK: Utilities */
 
 void tracer::handle_possible_fd_update(tracee* process) {
-	if (process->stopped_at_fork_or_clone()) {
+    if (process->stopped_at_fork_or_clone()) {
         handle_fork_clone(process);
     } else if (process->stopped_at_exec()) {
-    	
-    	// File descriptor may be asked to close
-    	// itself automatically when exec() ocurrs, so
-    	// filter such ones from m_opened_files array
 
-		process->filter_opened_files();
+        // File descriptor may be asked to close
+        // itself automatically when exec() ocurrs, so
+        // filter such ones from m_opened_files array
+
+        process->filter_opened_files();
     }
 }
 

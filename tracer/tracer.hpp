@@ -16,7 +16,7 @@ struct tracee_file;
 
 class tracer {
   public:
-    tracer(FILE* result_file) : m_result_file(result_file) {}
+    tracer(const char* result_file_path) : m_result_file_path(result_file_path) {}
     ~tracer() = default;
     tracer(const tracer& copy) = delete;
     tracer& operator=(const tracer& copy_assign) = delete;
@@ -30,8 +30,9 @@ class tracer {
 
     bool is_bpf_enabled();
 
-    static constexpr int GENERAL_PTRACE_FLAGS =
-        PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC;
+    static constexpr int GENERAL_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK |
+                                                PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE |
+                                                PTRACE_O_TRACEEXEC;
 
   private:
     /* MARK: Private methods */
@@ -64,7 +65,8 @@ class tracer {
 
     /* MARK: Private fields */
 
-    FILE* m_result_file;
+    const char* m_result_file_path;
+    FILE* m_result_file = nullptr;
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;
     std::unordered_map<pid_t, tracee> processes{};

@@ -2,9 +2,9 @@
 #include "seccomp.hpp"
 #include <cstddef>
 #include <cstdio>
+#include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
-#include <linux/audit.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 
