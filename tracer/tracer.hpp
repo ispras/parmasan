@@ -5,14 +5,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
-#include <linux/filter.h>
-#include <sys/ptrace.h>
-#include <sys/syscall.h>
-#include <sys/user.h>
-#include <unistd.h>
 #include <unordered_map>
-
-struct tracee_file;
 
 class tracer {
   public:
@@ -25,8 +18,9 @@ class tracer {
 
     void trace(char* argv[]);
 
-    void report_read(pid_t pid, tracee_file* file);
-    void report_write(pid_t pid, tracee_file* file);
+    void report_read(pid_t pid, struct stat* file);
+    void report_write(pid_t pid, struct stat* file);
+    // void report_child(pid_t parent, pid_t child);
 
     bool is_bpf_enabled();
 
@@ -47,16 +41,17 @@ class tracer {
 
     /* MARK: Syscall and fork handlers */
 
-    void handle_open_syscall(tracee* process, const char* pathname /*, int flags, mode_t mode*/);
-    void handle_openat_syscall(tracee* process, int dirfd,
-                               const char* pathname /*, int flags, mode_t mode*/);
-    void handle_close_syscall(tracee* process, int fd);
-    void handle_write_syscall(tracee* process, int fd, char* buf, uint64_t len);
-    void handle_read_syscall(tracee* process, int fd, char* buf, uint64_t len);
+    void report_read_write_for_mode(tracee* process, int fd, mode_t mode);
+    void handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode);
+    void handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
+                               mode_t mode);
+    void handle_openat2_syscall(tracee* process, int dirfd, const char* pathname,
+                                struct open_how* how, size_t size);
+    void handle_creat_syscall(tracee* process, const char* pathname, mode_t mode);
     void handle_syscall(tracee* process);
 
     void handle_fork_clone(tracee* process);
-    void handle_possible_fd_update(tracee* process);
+    void handle_possible_child(tracee* process);
 
     /* MARK: Utilities */
 

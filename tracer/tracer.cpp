@@ -1,6 +1,15 @@
 
 #include "tracer.hpp"
 #include "tracee.hpp"
+#include <fcntl.h>
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
+#include <linux/version.h>
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/user.h>
+#include <unistd.h>
 
 void tracer::trace(char* argv[]) {
     m_bpf_enabled = seccomp_available();
@@ -20,13 +29,17 @@ void tracer::trace(char* argv[]) {
     }
 }
 
-void tracer::report_read(pid_t pid, tracee_file* file) {
-    fprintf(m_result_file, "R %d %lu:%lu\n", pid, file->m_dev, file->m_inode);
+void tracer::report_read(pid_t pid, struct stat* stat) {
+    fprintf(m_result_file, "R %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
 }
 
-void tracer::report_write(pid_t pid, tracee_file* file) {
-    fprintf(m_result_file, "W %d %lu:%lu\n", pid, file->m_dev, file->m_inode);
+void tracer::report_write(pid_t pid, struct stat* stat) {
+    fprintf(m_result_file, "W %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
 }
+
+// void tracer::report_child(pid_t parent, pid_t child) {
+//     fprintf(m_result_file, "%d %d", parent, child);
+// }
 
 bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 
@@ -60,7 +73,7 @@ void tracer::bpf_loop() {
         if (process->stopped_at_seccomp()) {
             handle_syscall(process);
         } else {
-            handle_possible_fd_update(process);
+            handle_possible_child(process);
         }
 
         process->ptrace_continue();
@@ -83,7 +96,7 @@ void tracer::ptrace_loop() {
 
             process->exit_from_syscall();
         } else {
-            handle_possible_fd_update(process);
+            handle_possible_child(process);
         }
 
         process->ptrace_continue_to_syscall();
@@ -105,56 +118,62 @@ void tracer::child_task(char* argv[]) {
 
 void tracer::setup_seccomp() {
 
-    std::vector<unsigned int> syscalls_to_trace;
+    struct sock_filter filter[] = {
+        // Kill the process if it is not in 64-bit mode.
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch))),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
 
-    syscalls_to_trace.push_back(__NR_write);
-    syscalls_to_trace.push_back(__NR_read);
+        // Check the syscall id
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat2, 4, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_creat, 3, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat, 2, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_open, 1, 0),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW), BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRACE)};
 
-#ifdef DEBUG_FILE_PATHS
-    syscalls_to_trace.push_back(__NR_open);
-    syscalls_to_trace.push_back(__NR_openat);
-#endif
-
-    syscalls_to_trace.push_back(__NR_close);
-
-#ifdef DEBUG
-    printf("Syscalls filtered by BPF: ");
-    for (unsigned syscall : syscalls_to_trace) {
-        printf("%d ", syscall);
-    }
-    printf("\n");
-#endif
-
-    assert(seccomp_filter_syscalls(syscalls_to_trace));
+    struct sock_fprog prog = {sizeof(filter) / sizeof(*filter), filter};
+    assert(set_seccomp_filter(&prog));
 }
 
 /* MARK: Syscall handlers */
 
-void tracer::handle_open_syscall(tracee* process,
-                                 const char* pathname /*, int flags, mode_t mode*/) {
-    process->report_file_open(process->get_syscall_return_code(), pathname);
+void tracer::report_read_write_for_mode(tracee* process, int fd, mode_t mode) {
+    if (fd < 0)
+        return;
+    int pid = process->get_pid();
+    struct stat file_stat;
+    process->get_stat_for_fd(fd, &file_stat);
+
+    if ((mode | O_RDONLY) || (mode | O_RDWR))
+        report_read(pid, &file_stat);
+    if ((mode | O_WRONLY) || (mode | O_RDWR))
+        report_write(pid, &file_stat);
 }
 
-void tracer::handle_openat_syscall(tracee* process, int dirfd,
-                                   const char* pathname /*, int flags, mode_t mode*/) {
-    process->report_file_open(process->get_syscall_return_code(), pathname);
+void tracer::handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode) {
+    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
-void tracer::handle_close_syscall(tracee* process, int fd) { process->report_file_close(fd); }
-
-void tracer::handle_write_syscall(tracee* process, int fd, char* buf, uint64_t len) {
-    process->report_file_write(fd, len);
+void tracer::handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
+                                   mode_t mode) {
+    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
-void tracer::handle_read_syscall(tracee* process, int fd, char* buf, uint64_t len) {
-    process->report_file_read(fd, len);
+void tracer::handle_openat2_syscall(tracee* process, int dirfd, const char* pathname,
+                                    struct open_how* how, size_t size) {
+    report_read_write_for_mode(process, process->get_syscall_return_code(), how->mode);
+}
+
+void tracer::handle_creat_syscall(tracee* process, const char* pathname, mode_t mode) {
+    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
 void tracer::handle_syscall(tracee* process) {
     struct user_regs_struct state = {};
 
     // Kill the process if architecture is not x86-64
-    if(!process->ptrace_get_registers(&state)) {
+    if (!process->ptrace_get_registers(&state)) {
         kill(process->get_pid(), SIGKILL);
         return;
     }
@@ -162,23 +181,20 @@ void tracer::handle_syscall(tracee* process) {
     int syscall_num = state.orig_rax;
 
     switch (syscall_num) {
-    case SYS_write:
-        handle_write_syscall(process, (int)state.rdi, (char*)state.rsi, (uint64_t)state.rdx);
-        break;
-    case SYS_read:
-        handle_read_syscall(process, (int)state.rdi, (char*)state.rsi, (uint64_t)state.rdx);
-        break;
-    case SYS_close:
-        handle_close_syscall(process, (int)state.rdi);
-        break;
-#ifdef DEBUG_FILE_PATHS
     case SYS_open:
-        handle_open_syscall(process, (char*)state.rdi);
+        handle_open_syscall(process, (char*)state.rdi, (int)state.rsi, state.rdx);
         break;
     case SYS_openat:
-        handle_openat_syscall(process, (int)state.rdi, (char*)state.rsi);
+        handle_openat_syscall(process, (int)state.rdi, (char*)state.rsi, state.rdx, state.rcx);
         break;
-#endif
+    case SYS_openat2:
+        handle_openat2_syscall(process, (int)state.rdi, (char*)state.rsi, (open_how*)state.rdx,
+                               state.rcx);
+        break;
+    case SYS_creat:
+        handle_creat_syscall(process, (const char*)state.rdi, state.rsi);
+        break;
+
     default:
         break;
     }
@@ -186,22 +202,14 @@ void tracer::handle_syscall(tracee* process) {
 
 void tracer::handle_fork_clone(tracee* process) {
     pid_t forked_pid = process->ptrace_get_event_message();
-    tracee* forked_process = get_process(forked_pid);
-    forked_process->inherit_opened_files_from(process);
+    // report_child(process->get_pid(), forked_pid);
 }
 
 /* MARK: Utilities */
 
-void tracer::handle_possible_fd_update(tracee* process) {
+void tracer::handle_possible_child(tracee* process) {
     if (process->stopped_at_fork_or_clone()) {
         handle_fork_clone(process);
-    } else if (process->stopped_at_exec()) {
-
-        // File descriptor may be asked to close
-        // itself automatically when exec() ocurrs, so
-        // filter such ones from m_opened_files array
-
-        process->filter_opened_files();
     }
 }
 
