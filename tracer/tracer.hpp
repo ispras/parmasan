@@ -20,7 +20,7 @@ class tracer {
 
     void report_read(pid_t pid, struct stat* file);
     void report_write(pid_t pid, struct stat* file);
-    // void report_child(pid_t parent, pid_t child);
+    void report_child(pid_t parent, pid_t child);
 
     bool is_bpf_enabled();
 

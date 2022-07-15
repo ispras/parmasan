@@ -37,9 +37,9 @@ void tracer::report_write(pid_t pid, struct stat* stat) {
     fprintf(m_result_file, "W %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
 }
 
-// void tracer::report_child(pid_t parent, pid_t child) {
-//     fprintf(m_result_file, "%d %d", parent, child);
-// }
+void tracer::report_child(pid_t parent, pid_t child) {
+    fprintf(m_result_file, "%d %d\n", parent, child);
+}
 
 bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 
@@ -202,7 +202,7 @@ void tracer::handle_syscall(tracee* process) {
 
 void tracer::handle_fork_clone(tracee* process) {
     pid_t forked_pid = process->ptrace_get_event_message();
-    // report_child(process->get_pid(), forked_pid);
+    report_child(process->get_pid(), forked_pid);
 }
 
 /* MARK: Utilities */
