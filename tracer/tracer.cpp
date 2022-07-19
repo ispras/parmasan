@@ -153,21 +153,21 @@ void tracer::report_read_write_for_mode(tracee* process, int fd, mode_t mode) {
         report_write(pid, &file_stat);
 }
 
-void tracer::handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode) {
+void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int /*flags*/, mode_t mode) {
     report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
-void tracer::handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
+void tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/, int /*flags*/,
                                    mode_t mode) {
     report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
-void tracer::handle_openat2_syscall(tracee* process, int dirfd, const char* pathname,
-                                    struct open_how* how, size_t size) {
+void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
+                                    struct open_how* how, size_t /*size*/) {
     report_read_write_for_mode(process, process->get_syscall_return_code(), how->mode);
 }
 
-void tracer::handle_creat_syscall(tracee* process, const char* pathname, mode_t mode) {
+void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t mode) {
     report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
 }
 
