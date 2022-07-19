@@ -10,7 +10,7 @@ trap ' if [ -n "$pushed" ]; then popd; fi ' EXIT
 
 # makefile=order.make
 makefile=include.make
-src=/mnt/co/parmasan
+src=/mnt/co/parmasan/test
 target=all
 
 # makefile=Makefile
