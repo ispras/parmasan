@@ -147,9 +147,9 @@ void tracer::report_read_write_for_mode(tracee* process, int fd, mode_t mode) {
     struct stat file_stat;
     process->get_stat_for_fd(fd, &file_stat);
 
-    if ((mode | O_RDONLY) || (mode | O_RDWR))
+    if ((mode & O_RDONLY) || (mode & O_RDWR))
         report_read(pid, &file_stat);
-    if ((mode | O_WRONLY) || (mode | O_RDWR))
+    if ((mode & O_WRONLY) || (mode & O_RDWR))
         report_write(pid, &file_stat);
 }
 
