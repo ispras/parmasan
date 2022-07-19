@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(tracer)
 
-set(CMAKE_CXX_FLAGS "-g3 -fsanitize=address")
+set(CMAKE_CXX_FLAGS "-g3 -fsanitize=address -Wall -Wextra")
 
 set(CMAKE_CXX_STANDARD 20)
 
