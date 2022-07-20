@@ -22,7 +22,7 @@ void tracer::trace(char* argv[]) {
 #endif
     pid_t pid = fork();
 
-    if (pid) {
+    if (pid) { 
         m_child_pid = pid;
         parent_task();
     } else {
@@ -31,22 +31,30 @@ void tracer::trace(char* argv[]) {
 }
 
 void tracer::report_read(pid_t pid, struct stat* stat) {
-    fprintf(m_result_file, "R %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+    fprintf(m_result_file, "RD %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
 }
 
 void tracer::report_write(pid_t pid, struct stat* stat) {
-    fprintf(m_result_file, "W %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+    fprintf(m_result_file, "WR %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+}
+
+void tracer::report_read_write(pid_t pid, struct stat* stat) {
+    fprintf(m_result_file, "RW %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+}
+
+void tracer::report_unlink(pid_t pid, const std::string& path, struct stat* stat) {
+    fprintf(m_result_file, "UN %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
 }
 
 void tracer::report_child(pid_t parent, pid_t child) {
-    fprintf(m_result_file, "%d %d\n", parent, child);
+    fprintf(m_result_file, "CH %d %d\n", parent, child);
 }
 
 bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 
 void tracer::parent_task() {
     wait(nullptr);
-    m_result_file = fopen(m_result_file_path, "w");
+    m_result_file = fopen(m_result_file_path.c_str(), "w");
     if (!m_result_file) {
         perror("Failed to open result file");
         kill(m_child_pid, SIGKILL);
@@ -127,6 +135,8 @@ void tracer::setup_seccomp() {
 
         // Check the syscall id
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unlinkat, 6, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unlink, 5, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat2, 4, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_creat, 3, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat, 2, 0),
@@ -149,10 +159,41 @@ void tracer::report_read_write_for_flags(tracee* process, int fd, int flags) {
 
     flags &= O_ACCMODE;
 
-    if (flags == O_RDONLY || flags == O_RDWR)
+    if (flags == O_RDONLY)
         report_read(pid, &file_stat);
-    if (flags == O_WRONLY || flags == O_RDWR)
+    if (flags == O_WRONLY)
         report_write(pid, &file_stat);
+    if (flags == O_RDWR) {
+        report_read_write(pid, &file_stat);
+    }
+}
+
+void tracer::unlink_path(pid_t pid, const std::string& path) {
+    struct stat file_stat;
+    if(stat(path.c_str(), &file_stat) < 0) return;
+
+    report_unlink(pid, path, &file_stat);
+    ino_instances[FileNode { file_stat.st_dev, file_stat.st_ino }]++;
+}
+
+void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
+    std::filesystem::path filepath = process->get_cwd();
+    filepath /= process->read_string(pathname);
+
+    unlink_path(process->get_pid(), filepath);
+}
+
+void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char *pathname, int /*flag*/) {
+    if(dirfd == AT_FDCWD) {
+        handle_unlink_syscall(process, pathname);
+        return;
+    }
+
+    // TODO: handle read_string failure
+    std::filesystem::path filepath = process->get_path_for_fd(dirfd);
+    filepath /= process->read_string(pathname);
+
+    unlink_path(process->get_pid(), filepath);
 }
 
 void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
@@ -200,7 +241,12 @@ void tracer::handle_syscall(tracee* process) {
     case SYS_creat:
         handle_creat_syscall(process, (const char*)state.rdi, state.rsi);
         break;
-
+    case SYS_unlink:
+        handle_unlink_syscall(process, (char*)state.rdi);
+        break;
+    case SYS_unlinkat:
+        handle_unlinkat_syscall(process, (int)state.rdi, (char*)state.rsi, state.rdx);
+        break;
     default:
         break;
     }

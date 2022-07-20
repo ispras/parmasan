@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <filesystem>
 #include <vector>
 // #include <linux/openat2.h>
 #include "openat2.h"
@@ -53,12 +54,15 @@ class tracee {
     int get_status();
 
     void get_stat_for_fd(int fd, struct stat* file_stat);
+    std::filesystem::path get_path_for_fd(int fd);
+    std::filesystem::path get_cwd();
+    uint64_t read_word(void* process_addr);
+    std::string read_string(const char* process_addr);
 
   private:
     /* MARK: Private methods */
 
     void ptrace_continue_with_request(enum __ptrace_request command);
-    uint64_t read_word(void* process_addr);
 
     // MARK: Private fields
 

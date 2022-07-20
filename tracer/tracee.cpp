@@ -128,6 +128,24 @@ void tracee::get_stat_for_fd(int fd, struct stat* file_stat) {
     stat(stat_path.c_str(), file_stat);
 }
 
+std::filesystem::path tracee::get_path_for_fd(int fd) {
+    std::stringstream symlink_path_stream;
+
+    symlink_path_stream << "/proc/" << m_pid << "/fd/" << fd;
+    std::string symlink_path = symlink_path_stream.str();
+
+    return std::filesystem::read_symlink(symlink_path);
+}
+
+std::filesystem::path tracee::get_cwd() {
+    std::stringstream symlink_path_stream;
+
+    symlink_path_stream << "/proc/" << m_pid << "/cwd";
+    std::string symlink_path = symlink_path_stream.str();
+
+    return std::filesystem::read_symlink(symlink_path);
+}
+
 uint64_t tracee::read_word(void* process_addr) {
     uint64_t word = ptrace(PTRACE_PEEKTEXT, m_pid, process_addr, NULL);
     if (errno) {
@@ -136,6 +154,32 @@ uint64_t tracee::read_word(void* process_addr) {
     }
     return word;
 }
+
+std::string tracee::read_string(const char* process_addr) {
+    uint64_t block_addr = (uint64_t)process_addr;
+    unsigned char_index = (unsigned)(block_addr % 8);
+    block_addr -= char_index;
+
+    std::stringstream ss;
+
+    while (true) {
+        uint64_t process_word = read_word((void*)block_addr);
+        const char* string_part = (const char*)&process_word + char_index;
+
+        while (char_index++ < 8) {
+            char next_character = *(string_part++);
+            ss << next_character;
+
+            if (next_character == '\0') {
+                return ss.str();
+            }
+        }
+
+        block_addr += 8;
+        char_index = 0;
+    }
+}
+
 
 int tracee::get_pid() { return m_pid; }
 
