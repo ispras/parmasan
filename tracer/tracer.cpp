@@ -171,7 +171,8 @@ void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* 
 }
 
 void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
-    report_read_write_for_flags(process, process->get_syscall_return_code(), O_WRONLY | O_CREAT | O_TRUNC);
+    report_read_write_for_flags(process, process->get_syscall_return_code(),
+                                O_WRONLY | O_CREAT | O_TRUNC);
 }
 
 void tracer::handle_syscall(tracee* process) {
