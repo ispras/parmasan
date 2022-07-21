@@ -29,21 +29,20 @@ void tracer::trace(char* argv[]) {
     }
 }
 
-void tracer::report_read(pid_t pid, struct stat* stat) {
-    fprintf(m_result_file, "RD %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+void tracer::report_read(pid_t pid, const std::string& path, struct stat* stat) {
+    fprintf(m_result_file, "RD %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
 }
 
-void tracer::report_write(pid_t pid, struct stat* stat) {
-    fprintf(m_result_file, "WR %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+void tracer::report_write(pid_t pid, const std::string& path, struct stat* stat) {
+    fprintf(m_result_file, "WR %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
 }
 
-void tracer::report_read_write(pid_t pid, struct stat* stat) {
-    fprintf(m_result_file, "RW %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+void tracer::report_read_write(pid_t pid, const std::string& path, struct stat* stat) {
+    fprintf(m_result_file, "RW %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
 }
 
 void tracer::report_unlink(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_unlink_log, "%d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
-    fprintf(m_result_file, "UN %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
+    fprintf(m_result_file, "UN %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
 }
 
 void tracer::report_child(pid_t parent, pid_t child) {
@@ -53,13 +52,8 @@ void tracer::report_child(pid_t parent, pid_t child) {
 void tracer::parent_task() {
     wait(nullptr);
     m_result_file = fopen(m_result_file_path.c_str(), "w");
-    m_unlink_log = fopen(m_unlink_log_file_path.c_str(), "w");
 
-    if (!m_result_file || !m_unlink_log) {
-        if (m_result_file)
-            fclose(m_result_file);
-        if (m_unlink_log)
-            fclose(m_unlink_log);
+    if (!m_result_file) {
 
         perror("Failed to open result file");
         kill(m_child_pid, SIGKILL);
@@ -73,7 +67,6 @@ void tracer::parent_task() {
         ptrace_loop();
     }
 
-    fclose(m_unlink_log);
     fclose(m_result_file);
     m_result_file = nullptr;
 }
@@ -165,15 +158,16 @@ void tracer::report_read_write_for_flags(tracee* process, int fd, unsigned long 
     int pid = process->get_pid();
     struct stat file_stat {};
     process->get_stat_for_fd(fd, &file_stat);
+    std::string path = (std::string)process->get_path_for_fd(fd);
 
     flags &= O_ACCMODE;
 
     if (flags == O_RDONLY)
-        report_read(pid, &file_stat);
+        report_read(pid, path, &file_stat);
     if (flags == O_WRONLY)
-        report_write(pid, &file_stat);
+        report_write(pid, path, &file_stat);
     if (flags == O_RDWR) {
-        report_read_write(pid, &file_stat);
+        report_read_write(pid, path, &file_stat);
     }
 }
 

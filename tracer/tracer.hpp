@@ -10,8 +10,8 @@
 
 class tracer {
   public:
-    tracer(std::string result_file_path, std::string unlink_log_file_path)
-        : m_result_file_path(result_file_path), m_unlink_log_file_path(unlink_log_file_path) {}
+    tracer(std::string result_file_path)
+        : m_result_file_path(result_file_path) {}
     ~tracer() = default;
     tracer(const tracer& copy) = delete;
     tracer& operator=(const tracer& copy_assign) = delete;
@@ -20,9 +20,9 @@ class tracer {
 
     void trace(char* argv[]);
 
-    void report_read(pid_t pid, struct stat* file);
-    void report_write(pid_t pid, struct stat* file);
-    void report_read_write(pid_t pid, struct stat* file);
+    void report_read(pid_t pid, const std::string& path, struct stat* file);
+    void report_write(pid_t pid, const std::string& path, struct stat* file);
+    void report_read_write(pid_t pid, const std::string& path, struct stat* file);
     void report_child(pid_t parent, pid_t child);
     void report_unlink(pid_t pid, const std::string& path, struct stat* stat);
 
@@ -71,9 +71,7 @@ class tracer {
     /* MARK: Private fields */
 
     std::string m_result_file_path;
-    std::string m_unlink_log_file_path;
     FILE* m_result_file = nullptr;
-    FILE* m_unlink_log = nullptr;
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;
     std::unordered_map<pid_t, tracee> processes{};

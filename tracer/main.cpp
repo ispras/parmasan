@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    tracer t("./tracer-result.txt", "./tracer-deleted-files.txt");
+    tracer t("./tracer-result.txt");
     t.trace(argv + 1);
 
     return 0;
