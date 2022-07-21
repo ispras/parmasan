@@ -23,21 +23,20 @@ class tracee {
     tracee(const tracee& copy) = delete;
     tracee& operator=(const tracee& copy_assign) = delete;
     tracee(tracee&& move) = default;
-    tracee& operator=(tracee& move_assign) = default;
+    tracee& operator=(tracee&& move_assign) = default;
 
-    bool initialized();
-    void initialize(int pid, tracer* tracer);
+    bool initialized() const;
+    void initialize(int pid);
 
     void set_at_syscall_entry(int status);
-    bool is_at_syscall_entry();
+    bool is_at_syscall_entry() const;
 
     /* MARK: Utilities */
 
     void exit_from_syscall();
-    int64_t get_syscall_return_code();
+    unsigned long long int get_syscall_return_code();
 
     bool stopped_at_fork_or_clone();
-    bool stopped_at_exec();
     bool stopped_at_seccomp();
     bool stopped_at_syscall();
     bool stopped_at_signal();
@@ -46,7 +45,6 @@ class tracee {
     bool ptrace_get_registers(struct user_regs_struct* regs);
     void ptrace_continue();
     void ptrace_continue_to_syscall();
-    void ptrace_detach();
 
     void wait();
 
@@ -69,6 +67,4 @@ class tracee {
     int m_pid = -1;
     int m_status = -1;
     bool m_is_at_syscall_entry = false;
-
-    tracer* m_tracer;
 };

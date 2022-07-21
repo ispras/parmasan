@@ -1,12 +1,8 @@
 
 #include "seccomp.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
 #include <sys/prctl.h>
-#include <sys/syscall.h>
 
 bool set_seccomp_filter(struct sock_fprog* prog) {
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {

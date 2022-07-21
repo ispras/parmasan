@@ -26,8 +26,6 @@ class tracer {
     void report_child(pid_t parent, pid_t child);
     void report_unlink(pid_t pid, const std::string& path, struct stat* stat);
 
-    bool is_bpf_enabled();
-
     static constexpr int GENERAL_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK |
                                                 PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE |
                                                 PTRACE_O_TRACEEXEC;
@@ -39,13 +37,13 @@ class tracer {
     void bpf_loop();
     void ptrace_loop();
 
-    void child_task(char* argv[]);
+    void child_task(char* argv[]) const;
 
-    void setup_seccomp();
+    static void setup_seccomp();
 
     /* MARK: Syscall and fork handlers */
 
-    void report_read_write_for_flags(tracee* process, int fd, int flags);
+    void report_read_write_for_flags(tracee* process, int fd, unsigned long long flags);
     void handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode);
     void handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
                                mode_t mode);

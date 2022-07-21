@@ -1,17 +1,15 @@
 
 #include "tracee.hpp"
-#include "tracer.hpp"
 #include <cassert>
 #include <dirent.h>
 #include <linux/elf.h>
 #include <sys/uio.h>
 
-bool tracee::initialized() { return m_pid >= 0; }
+bool tracee::initialized() const { return m_pid >= 0; }
 
-void tracee::initialize(int pid, tracer* tracer) {
+void tracee::initialize(int pid) {
     assert(m_pid == -1 && pid != -1);
     m_pid = pid;
-    m_tracer = tracer;
 }
 
 void tracee::set_at_syscall_entry(int status) {
@@ -19,7 +17,7 @@ void tracee::set_at_syscall_entry(int status) {
     m_is_at_syscall_entry = true;
 }
 
-bool tracee::is_at_syscall_entry() { return m_is_at_syscall_entry; }
+bool tracee::is_at_syscall_entry() const { return m_is_at_syscall_entry; }
 
 void tracee::exit_from_syscall() {
     if (!m_is_at_syscall_entry)
@@ -29,7 +27,7 @@ void tracee::exit_from_syscall() {
     wait();
 }
 
-int64_t tracee::get_syscall_return_code() {
+unsigned long long int tracee::get_syscall_return_code() {
     exit_from_syscall();
     if (!stopped_at_syscall()) {
         // Perhaps, it happened to be a faulty syscall
@@ -52,15 +50,6 @@ bool tracee::stopped_at_fork_or_clone() {
     return sig == (SIGTRAP | (PTRACE_EVENT_FORK << 8)) ||
            sig == (SIGTRAP | (PTRACE_EVENT_VFORK << 8)) ||
            sig == (SIGTRAP | (PTRACE_EVENT_CLONE << 8));
-}
-
-bool tracee::stopped_at_exec() {
-    if (!WIFSTOPPED(m_status)) {
-        return false;
-    }
-
-    int sig = m_status >> 8;
-    return sig == (SIGTRAP | (PTRACE_EVENT_EXEC << 8));
 }
 
 bool tracee::stopped_at_seccomp() {
@@ -109,12 +98,6 @@ void tracee::ptrace_continue_with_request(enum __ptrace_request request) {
 
     m_status = -1;
     m_is_at_syscall_entry = false;
-}
-
-void tracee::ptrace_detach() {
-    m_status = -1;
-    m_is_at_syscall_entry = false;
-    ptrace(PTRACE_DETACH, m_pid, 0, 0);
 }
 
 void tracee::wait() { waitpid(m_pid, &m_status, 0); }

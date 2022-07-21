@@ -1,9 +1,5 @@
 #include "tracer.hpp"
 #include <cstdio>
-#include <fcntl.h>
-#include <signal.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
 
 int main(int argc, char* argv[]) {
 
