@@ -2,16 +2,16 @@
 
 #include "seccomp.hpp"
 #include "tracee.hpp"
-#include "entry.hpp"
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 class tracer {
   public:
-    tracer(std::string result_file_path) : m_result_file_path(result_file_path) {}
+    tracer(std::string result_file_path, std::string unlink_log_file_path)
+        : m_result_file_path(result_file_path), m_unlink_log_file_path(unlink_log_file_path) {}
     ~tracer() = default;
     tracer(const tracer& copy) = delete;
     tracer& operator=(const tracer& copy_assign) = delete;
@@ -51,10 +51,15 @@ class tracer {
                                mode_t mode);
     void handle_openat2_syscall(tracee* process, int dirfd, const char* pathname,
                                 struct open_how* how, size_t size);
+
     void handle_creat_syscall(tracee* process, const char* pathname, mode_t mode);
     void handle_unlink_syscall(tracee* process, const char* pathname);
-    void handle_unlinkat_syscall(tracee* process, int dirfd, const char *path, int flag);
+    void handle_unlinkat_syscall(tracee* process, int dirfd, const char* path, int flag);
     void handle_syscall(tracee* process);
+
+    void handle_rename_syscall(tracee* process, const char* oldpath, const char* newpath);
+    void handle_renameat_syscall(tracee* process, int olddirfd, const char* oldpath, int newdirfd, const char* newpath);
+    void handle_renameat2_syscall(tracee* process, int olddirfd, const char* oldpath, int newdirfd, const char* newpath, int flags);
 
     void handle_fork_clone(tracee* process);
     void handle_possible_child(tracee* process);
@@ -68,9 +73,10 @@ class tracer {
     /* MARK: Private fields */
 
     std::string m_result_file_path;
+    std::string m_unlink_log_file_path;
     FILE* m_result_file = nullptr;
+    FILE* m_unlink_log = nullptr;
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;
     std::unordered_map<pid_t, tracee> processes{};
-    std::unordered_map<FileNode, int> ino_instances{};
 };

@@ -180,7 +180,6 @@ std::string tracee::read_string(const char* process_addr) {
     }
 }
 
-
 int tracee::get_pid() { return m_pid; }
 
 int tracee::get_status() { return m_status; }

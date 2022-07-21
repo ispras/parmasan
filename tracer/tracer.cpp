@@ -22,7 +22,7 @@ void tracer::trace(char* argv[]) {
 #endif
     pid_t pid = fork();
 
-    if (pid) { 
+    if (pid) {
         m_child_pid = pid;
         parent_task();
     } else {
@@ -43,7 +43,8 @@ void tracer::report_read_write(pid_t pid, struct stat* stat) {
 }
 
 void tracer::report_unlink(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_result_file, "UN %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    fprintf(m_unlink_log, "%d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    fprintf(m_result_file, "UN %d %lu:%lu\n", pid, stat->st_dev, stat->st_ino);
 }
 
 void tracer::report_child(pid_t parent, pid_t child) {
@@ -55,7 +56,14 @@ bool tracer::is_bpf_enabled() { return m_bpf_enabled; }
 void tracer::parent_task() {
     wait(nullptr);
     m_result_file = fopen(m_result_file_path.c_str(), "w");
-    if (!m_result_file) {
+    m_unlink_log = fopen(m_unlink_log_file_path.c_str(), "w");
+
+    if (!m_result_file || !m_unlink_log) {
+        if (m_result_file)
+            fclose(m_result_file);
+        if (m_unlink_log)
+            fclose(m_unlink_log);
+
         perror("Failed to open result file");
         kill(m_child_pid, SIGKILL);
         printf("Aborting.\n");
@@ -68,6 +76,7 @@ void tracer::parent_task() {
         ptrace_loop();
     }
 
+    fclose(m_unlink_log);
     fclose(m_result_file);
     m_result_file = nullptr;
 }
@@ -135,6 +144,9 @@ void tracer::setup_seccomp() {
 
         // Check the syscall id
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rename, 9, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_renameat, 8, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_renameat2, 7, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unlinkat, 6, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_unlink, 5, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat2, 4, 0),
@@ -170,10 +182,12 @@ void tracer::report_read_write_for_flags(tracee* process, int fd, int flags) {
 
 void tracer::unlink_path(pid_t pid, const std::string& path) {
     struct stat file_stat;
-    if(stat(path.c_str(), &file_stat) < 0) return;
+
+    // Using lstat here as unlink does not resolve symlinks
+    if (lstat(path.c_str(), &file_stat) < 0)
+        return;
 
     report_unlink(pid, path, &file_stat);
-    ino_instances[FileNode { file_stat.st_dev, file_stat.st_ino }]++;
 }
 
 void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
@@ -183,8 +197,9 @@ void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
     unlink_path(process->get_pid(), filepath);
 }
 
-void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char *pathname, int /*flag*/) {
-    if(dirfd == AT_FDCWD) {
+void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pathname,
+                                     int /*flag*/) {
+    if (dirfd == AT_FDCWD) {
         handle_unlink_syscall(process, pathname);
         return;
     }
@@ -199,11 +214,15 @@ void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char *pat
 void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
                                  mode_t /*mode*/) {
     report_read_write_for_flags(process, process->get_syscall_return_code(), flags);
+    // std::string str = process->read_string(pathname);
+    // fprintf(m_result_file, " (= %s)\n", str.c_str());
 }
 
 void tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                    int flags, mode_t /*mode*/) {
     report_read_write_for_flags(process, process->get_syscall_return_code(), flags);
+    // std::string str = process->read_string(pathname);
+    // fprintf(m_result_file, " (= %s)\n", str.c_str());
 }
 
 void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
@@ -214,6 +233,21 @@ void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* 
 void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
     report_read_write_for_flags(process, process->get_syscall_return_code(),
                                 O_WRONLY | O_CREAT | O_TRUNC);
+}
+
+// Handle rename as unlink of destination
+void tracer::handle_rename_syscall(tracee* process, const char* /*oldpath*/, const char* newpath) {
+    handle_unlink_syscall(process, newpath);
+}
+
+void tracer::handle_renameat_syscall(tracee* process, int /*olddirfd*/, const char* /*oldpath*/, int newdirfd, const char* newpath) {
+    handle_unlinkat_syscall(process, newdirfd, newpath, 0);
+}
+
+void tracer::handle_renameat2_syscall(tracee* process, int /*olddirfd*/, const char* /*oldpath*/, int newdirfd, const char* newpath, int flags) {
+    if(flags & RENAME_NOREPLACE || flags & RENAME_EXCHANGE) return;
+
+    handle_unlinkat_syscall(process, newdirfd, newpath, 0);
 }
 
 void tracer::handle_syscall(tracee* process) {
@@ -246,6 +280,15 @@ void tracer::handle_syscall(tracee* process) {
         break;
     case SYS_unlinkat:
         handle_unlinkat_syscall(process, (int)state.rdi, (char*)state.rsi, state.rdx);
+        break;
+    case SYS_rename:
+        handle_rename_syscall(process, (char*) state.rdi, (char*) state.rsi);
+        break;
+    case SYS_renameat:
+        handle_renameat_syscall(process, (int)state.rdi, (char*) state.rsi, (int)state.rdx, (char*) state.r10);
+        break;
+    case SYS_renameat2:
+        handle_renameat2_syscall(process, (int)state.rdi, (char*) state.rsi, (int)state.rdx, (char*) state.r10, (int) state.r11);
         break;
     default:
         break;
