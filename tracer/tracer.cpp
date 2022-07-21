@@ -185,7 +185,7 @@ void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
-    unlink_path(process->get_pid(), filepath);
+    unlink_path(process->get_pid(), std::filesystem::weakly_canonical(filepath));
 }
 
 void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pathname,
@@ -199,21 +199,17 @@ void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pat
     std::filesystem::path filepath = process->get_path_for_fd(dirfd);
     filepath /= process->read_string(pathname);
 
-    unlink_path(process->get_pid(), filepath);
+    unlink_path(process->get_pid(), std::filesystem::weakly_canonical(filepath));
 }
 
 void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
                                  mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
-    // std::string str = process->read_string(pathname);
-    // fprintf(m_result_file, " (= %s)\n", str.c_str());
 }
 
 void tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                    int flags, mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
-    // std::string str = process->read_string(pathname);
-    // fprintf(m_result_file, " (= %s)\n", str.c_str());
 }
 
 void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
