@@ -2,25 +2,22 @@
 
 #include "entry.hpp"
 #include "file-access-type.hpp"
+#include "target.hpp"
 #include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "target.hpp"
 
 namespace PS {
 
-struct File;
-struct FileAccessRecord {
-    FileAccessType m_access_type{};
-    Target* m_target{};
-};
+class File;
 
-struct File {
+class File {
+  public:
     std::string m_name;
-    std::vector<FileAccessRecord> m_accesses{};
     std::unordered_map<std::string, std::unique_ptr<File>> m_children{};
+    Entry m_entry{};
     File* m_parent = nullptr;
 
     File(File&& move) = delete;
@@ -33,12 +30,12 @@ struct File {
             m_name.pop_back();
         }
     }
+    explicit File(const char* name) : File((std::string)name) {}
 
-    Entry get_current_entry() const;
+    File* get_child(const std::string& child_name);
 
-    std::string get_absolute_path() const;
-    std::string get_relative_path() const;
+    std::string get_path() const;
 
-    void walk_path(std::stringstream& stream, bool absolute) const;
+    void walk_path(std::stringstream& stream) const;
 };
 } // namespace PS

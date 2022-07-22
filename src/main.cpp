@@ -1,16 +1,20 @@
 
-#include "engine.hpp"
-#include "entry.hpp"
-#include <filesystem>
+#include "parmasan-daemon.hpp"
 
 int main() {
-    std::string build_directory = (std::string)std::filesystem::current_path();
+    PS::ParmasanDaemon daemon;
 
-    PS::Engine engine(build_directory);
+    if (!daemon.create_socket()) {
+        std::cerr << "Failed to create socket\n";
+        return EXIT_FAILURE;
+    }
 
-    engine.read_dependencies(std::ifstream("dep_graph.txt"));
-    engine.read_target_pids(std::ifstream("pid.txt"));
-    engine.read_accesses(std::ifstream("tracer-result.txt"));
+    if (!daemon.listen("/tmp/parmasan-socket.sock")) {
+        std::cerr << "Failed to bind to socket\n";
+        return EXIT_FAILURE;
+    }
+
+    daemon.loop();
 
     return 0;
 }

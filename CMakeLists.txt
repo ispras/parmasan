@@ -8,3 +8,4 @@ set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB_RECURSE files "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/src/*.hpp")
 add_executable(parmasan ${files})
+target_include_directories(parmasan PUBLIC src)
