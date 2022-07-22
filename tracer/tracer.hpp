@@ -41,7 +41,7 @@ class tracer {
 
     /* MARK: Syscall and fork handlers */
 
-    void report_read_write_for_mode(tracee* process, int fd, mode_t mode);
+    void report_read_write_for_flags(tracee* process, int fd, int flags);
     void handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode);
     void handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
                                mode_t mode);

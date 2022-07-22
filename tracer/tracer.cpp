@@ -1,6 +1,7 @@
 
 #include "tracer.hpp"
 #include "tracee.hpp"
+#include <cassert>
 #include <fcntl.h>
 #include <linux/audit.h>
 #include <linux/filter.h>
@@ -10,7 +11,6 @@
 #include <sys/syscall.h>
 #include <sys/user.h>
 #include <unistd.h>
-#include <cassert>
 
 void tracer::trace(char* argv[]) {
     m_bpf_enabled = seccomp_available();
@@ -140,35 +140,38 @@ void tracer::setup_seccomp() {
 
 /* MARK: Syscall handlers */
 
-void tracer::report_read_write_for_mode(tracee* process, int fd, mode_t mode) {
+void tracer::report_read_write_for_flags(tracee* process, int fd, int flags) {
     if (fd < 0)
         return;
     int pid = process->get_pid();
     struct stat file_stat;
     process->get_stat_for_fd(fd, &file_stat);
 
-    if ((mode & O_RDONLY) || (mode & O_RDWR))
+    flags &= O_ACCMODE;
+
+    if (flags == O_RDONLY || flags == O_RDWR)
         report_read(pid, &file_stat);
-    if ((mode & O_WRONLY) || (mode & O_RDWR))
+    if (flags == O_WRONLY || flags == O_RDWR)
         report_write(pid, &file_stat);
 }
 
-void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int /*flags*/, mode_t mode) {
-    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
+void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
+                                 mode_t /*mode*/) {
+    report_read_write_for_flags(process, process->get_syscall_return_code(), flags);
 }
 
-void tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/, int /*flags*/,
-                                   mode_t mode) {
-    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
+void tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
+                                   int flags, mode_t /*mode*/) {
+    report_read_write_for_flags(process, process->get_syscall_return_code(), flags);
 }
 
 void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                     struct open_how* how, size_t /*size*/) {
-    report_read_write_for_mode(process, process->get_syscall_return_code(), how->mode);
+    report_read_write_for_flags(process, process->get_syscall_return_code(), how->flags);
 }
 
-void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t mode) {
-    report_read_write_for_mode(process, process->get_syscall_return_code(), mode);
+void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
+    report_read_write_for_flags(process, process->get_syscall_return_code(), O_WRONLY | O_CREAT | O_TRUNC);
 }
 
 void tracer::handle_syscall(tracee* process) {
