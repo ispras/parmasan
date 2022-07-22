@@ -29,20 +29,25 @@ void tracer::trace(char* argv[]) {
     }
 }
 
+void tracer::report_file_op(const char* op, pid_t pid, const std::string& path, struct stat* stat) {
+    assert(path == std::filesystem::weakly_canonical(path));
+    fprintf(m_result_file, "%s %d %lu:%lu %s\n", op, pid, stat->st_dev, stat->st_ino, path.c_str());
+}
+
 void tracer::report_read(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_result_file, "RD %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    report_file_op("RD", pid, path, stat);
 }
 
 void tracer::report_write(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_result_file, "WR %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    report_file_op("WR", pid, path, stat);
 }
 
 void tracer::report_read_write(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_result_file, "RW %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    report_file_op("RW", pid, path, stat);
 }
 
 void tracer::report_unlink(pid_t pid, const std::string& path, struct stat* stat) {
-    fprintf(m_result_file, "UN %d %lu:%lu %s\n", pid, stat->st_dev, stat->st_ino, path.c_str());
+    report_file_op("UN", pid, path, stat);
 }
 
 void tracer::report_child(pid_t parent, pid_t child) {

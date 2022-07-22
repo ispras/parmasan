@@ -20,9 +20,9 @@ class tracer {
 
     void trace(char* argv[]);
 
-    void report_read(pid_t pid, const std::string& path, struct stat* file);
-    void report_write(pid_t pid, const std::string& path, struct stat* file);
-    void report_read_write(pid_t pid, const std::string& path, struct stat* file);
+    void report_read(pid_t pid, const std::string& path, struct stat* stat);
+    void report_write(pid_t pid, const std::string& path, struct stat* stat);
+    void report_read_write(pid_t pid, const std::string& path, struct stat* stat);
     void report_child(pid_t parent, pid_t child);
     void report_unlink(pid_t pid, const std::string& path, struct stat* stat);
 
@@ -67,6 +67,7 @@ class tracer {
     tracee* get_process(pid_t pid);
     tracee* wait_for_process();
     void unlink_path(pid_t pid, const std::string& path);
+    void report_file_op(const char *op, pid_t pid, const std::string& path, struct stat* stat);
 
     /* MARK: Private fields */
 
