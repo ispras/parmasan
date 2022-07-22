@@ -190,11 +190,11 @@ void tracer::handle_syscall(tracee* process) {
         handle_open_syscall(process, (char*)state.rdi, (int)state.rsi, state.rdx);
         break;
     case SYS_openat:
-        handle_openat_syscall(process, (int)state.rdi, (char*)state.rsi, state.rdx, state.rcx);
+        handle_openat_syscall(process, (int)state.rdi, (char*)state.rsi, state.rdx, state.r10);
         break;
     case SYS_openat2:
         handle_openat2_syscall(process, (int)state.rdi, (char*)state.rsi, (open_how*)state.rdx,
-                               state.rcx);
+                               state.r10);
         break;
     case SYS_creat:
         handle_creat_syscall(process, (const char*)state.rdi, state.rsi);
