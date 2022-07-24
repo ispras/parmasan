@@ -1,5 +1,6 @@
 
 #include "tracer.hpp"
+#include "shared/connection-state.hpp"
 #include "tracee.hpp"
 #include <cassert>
 #include <fcntl.h>
@@ -29,42 +30,77 @@ void tracer::trace(char* argv[]) {
     }
 }
 
-void tracer::report_file_op(const char* op, pid_t pid, const std::string& path, struct stat* stat) {
+void tracer::report_file_op(PS::TracerEventType type, pid_t pid, const std::string& path,
+                            struct stat* stat) {
     assert(path == std::filesystem::weakly_canonical(path));
-    fprintf(m_result_file, "%s %d %lu:%lu %s\n", op, pid, stat->st_dev, stat->st_ino, path.c_str());
-}
-
-void tracer::report_read(pid_t pid, const std::string& path, struct stat* stat) {
-    report_file_op("RD", pid, path, stat);
-}
-
-void tracer::report_write(pid_t pid, const std::string& path, struct stat* stat) {
-    report_file_op("WR", pid, path, stat);
-}
-
-void tracer::report_read_write(pid_t pid, const std::string& path, struct stat* stat) {
-    report_file_op("RW", pid, path, stat);
-}
-
-void tracer::report_unlink(pid_t pid, const std::string& path, struct stat* stat) {
-    report_file_op("UN", pid, path, stat);
+    PS::TracerFileEvent event = {.pid = pid,
+                                 .file_entry = {.device = stat->st_dev, .inode = stat->st_ino}};
+    m_output_buffer.clear();
+    m_output_buffer.write(&type);
+    m_output_buffer.write(&event);
+    m_output_buffer.write_string(path);
+    m_socket.send(m_output_buffer.data(), m_output_buffer.size());
 }
 
 void tracer::report_child(pid_t parent, pid_t child) {
-    fprintf(m_result_file, "CH %d %d\n", parent, child);
+    PS::TracerEventType type = PS::TRACER_EVENT_CHILD;
+    PS::TracerChildEvent event{.pid = child, .ppid = parent};
+    m_output_buffer.clear();
+    m_output_buffer.write(&type);
+    m_output_buffer.write(&event);
+    m_socket.send(m_output_buffer.data(), m_output_buffer.size());
+    wait_for_parmasan_acknowledgement();
+}
+
+void tracer::report_done() {
+    PS::TracerEventType event = PS::TRACER_EVENT_DONE;
+    m_output_buffer.clear();
+    m_output_buffer.write(&event);
+    m_socket.send(m_output_buffer.data(), m_output_buffer.size());
+}
+
+int tracer::wait_for_parmasan_acknowledgement() {
+    char buffer[8] = {};
+
+    while (1) {
+        ssize_t length = m_socket.read(buffer, sizeof(buffer));
+        if (length < 0)
+            return -1;
+
+        if (strcmp(buffer, "ACK") == 0)
+            return 0;
+    }
+}
+
+bool tracer::connect_to_socket() {
+    if (!m_socket.setup_socket()) {
+        fprintf(stderr, "Failed to setup daemon communication socket\n");
+        return false;
+    }
+
+    if (!m_socket.connect(m_socket_path.c_str())) {
+        fprintf(stderr, "Failed to connect to parmasan daemon. Is it up?\n");
+        return false;
+    }
+
+    // Send initialization packet
+    ConnectionState state = CONNECTION_STATE_TRACER_PROCESS;
+    m_output_buffer.clear();
+    m_output_buffer.write(&state);
+    m_socket.send(m_output_buffer.data(), m_output_buffer.size());
+
+    return true;
 }
 
 void tracer::parent_task() {
-    wait(nullptr);
-    m_result_file = fopen(m_result_file_path.c_str(), "w");
-
-    if (!m_result_file) {
-
-        perror("Failed to open result file");
+    if (!connect_to_socket()) {
         kill(m_child_pid, SIGKILL);
-        printf("Aborting.\n");
         return;
     }
+
+    report_child(getpid(), m_child_pid);
+
+    wait(nullptr);
 
     if (m_bpf_enabled) {
         bpf_loop();
@@ -72,8 +108,8 @@ void tracer::parent_task() {
         ptrace_loop();
     }
 
-    fclose(m_result_file);
-    m_result_file = nullptr;
+    report_done();
+    m_socket.close();
 }
 
 void tracer::bpf_loop() {
@@ -167,13 +203,19 @@ void tracer::report_read_write_for_flags(tracee* process, int fd, unsigned long 
 
     flags &= O_ACCMODE;
 
-    if (flags == O_RDONLY)
-        report_read(pid, path, &file_stat);
-    if (flags == O_WRONLY)
-        report_write(pid, path, &file_stat);
-    if (flags == O_RDWR) {
-        report_read_write(pid, path, &file_stat);
+    PS::TracerEventType event;
+
+    if (flags == O_RDONLY) {
+        event = PS::TRACER_EVENT_READ;
+    } else if (flags == O_WRONLY) {
+        event = PS::TRACER_EVENT_WRITE;
+    } else if (flags == O_RDWR) {
+        event = PS::TRACER_EVENT_READ_WRITE;
+    } else {
+        return;
     }
+
+    report_file_op(event, pid, path, &file_stat);
 }
 
 void tracer::unlink_path(pid_t pid, const std::string& path) {
@@ -183,7 +225,7 @@ void tracer::unlink_path(pid_t pid, const std::string& path) {
     if (lstat(path.c_str(), &file_stat) < 0)
         return;
 
-    report_unlink(pid, path, &file_stat);
+    report_file_op(PS::TRACER_EVENT_UNLINK, pid, path, &file_stat);
 }
 
 void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {

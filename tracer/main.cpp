@@ -1,4 +1,5 @@
-#include "tracer.hpp"
+
+#include "tracer/tracer.hpp"
 #include <cstdio>
 
 int main(int argc, char* argv[]) {
@@ -8,7 +9,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    tracer t("./tracer-result.txt");
+    tracer t("/tmp/parmasan-socket.sock");
     t.trace(argv + 1);
 
     return 0;
