@@ -18,13 +18,13 @@ enum TracerEventType : char {
 };
 
 struct TracerChildEvent {
-    pid_t m_pid;
-    pid_t m_ppid;
+    pid_t pid;
+    pid_t ppid;
 };
 
 struct TracerFileEvent {
-    pid_t m_pid;
-    Entry m_file_entry;
+    pid_t pid;
+    Entry file_entry;
 };
 
 } // namespace PS
