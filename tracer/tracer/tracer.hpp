@@ -11,14 +11,14 @@
 #include <string>
 #include <unordered_map>
 
-class tracer {
+class Tracer {
   public:
-    tracer(const std::string& socket_path) : m_socket_path(socket_path) {}
-    ~tracer() = default;
-    tracer(const tracer& copy) = delete;
-    tracer& operator=(const tracer& copy_assign) = delete;
-    tracer(tracer&& move) = delete;
-    tracer& operator=(tracer& move_assign) = delete;
+    Tracer(const std::string& socket_path) : m_socket_path(socket_path) {}
+    ~Tracer() = default;
+    Tracer(const Tracer& copy) = delete;
+    Tracer& operator=(const Tracer& copy_assign) = delete;
+    Tracer(Tracer&& move) = delete;
+    Tracer& operator=(Tracer& move_assign) = delete;
 
     void trace(char* argv[]);
 

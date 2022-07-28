@@ -14,7 +14,7 @@
 // #include <linux/openat2.h>
 #include "openat2.h"
 
-class tracer;
+class Tracer;
 
 class tracee {
   public:
