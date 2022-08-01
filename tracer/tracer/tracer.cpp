@@ -115,7 +115,7 @@ void Tracer::parent_task() {
 void Tracer::bpf_loop() {
     ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, Tracer::GENERAL_PTRACE_FLAGS | PTRACE_O_TRACESECCOMP);
 
-    tracee* process = get_process(m_child_pid);
+    Tracee* process = get_process(m_child_pid);
     process->ptrace_continue();
 
     while ((process = wait_for_process())) {
@@ -131,7 +131,7 @@ void Tracer::bpf_loop() {
 
 void Tracer::ptrace_loop() {
     ptrace(PTRACE_SETOPTIONS, m_child_pid, 0, Tracer::GENERAL_PTRACE_FLAGS);
-    tracee* process = get_process(m_child_pid);
+    Tracee* process = get_process(m_child_pid);
     process->ptrace_continue_to_syscall();
 
     while ((process = wait_for_process())) {
@@ -196,7 +196,7 @@ void Tracer::setup_seccomp() {
 
 /* MARK: Syscall handlers */
 
-void Tracer::report_read_write_for_flags(tracee* process, int fd, unsigned long long flags) {
+void Tracer::report_read_write_for_flags(Tracee* process, int fd, unsigned long long flags) {
     if (fd < 0)
         return;
     int pid = process->get_pid();
@@ -221,7 +221,7 @@ void Tracer::report_read_write_for_flags(tracee* process, int fd, unsigned long 
     report_file_op(event, pid, path, &file_stat);
 }
 
-void Tracer::unlink_path(tracee* process, const std::string& path) {
+void Tracer::unlink_path(Tracee* process, const std::string& path) {
     struct stat file_stat {};
 
     // Using lstat here as unlink does not resolve symlinks
@@ -238,14 +238,14 @@ void Tracer::unlink_path(tracee* process, const std::string& path) {
     }
 }
 
-void Tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
+void Tracer::handle_unlink_syscall(Tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
     unlink_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
-void Tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pathname,
+void Tracer::handle_unlinkat_syscall(Tracee* process, int dirfd, const char* pathname,
                                      int /*flag*/) {
     if (dirfd == AT_FDCWD) {
         handle_unlink_syscall(process, pathname);
@@ -259,27 +259,27 @@ void Tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pat
     unlink_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
-void Tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
+void Tracer::handle_open_syscall(Tracee* process, const char* /*pathname*/, int flags,
                                  mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
 }
 
-void Tracer::handle_openat_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
+void Tracer::handle_openat_syscall(Tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                    int flags, mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
 }
 
-void Tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* /*pathname*/,
+void Tracer::handle_openat2_syscall(Tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                     struct open_how* how, size_t /*size*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(), how->flags);
 }
 
-void Tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
+void Tracer::handle_creat_syscall(Tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(),
                                 O_WRONLY | O_CREAT | O_TRUNC);
 }
 
-void Tracer::handle_mkdir_at_path(tracee* process, const std::string& path) {
+void Tracer::handle_mkdir_at_path(Tracee* process, const std::string& path) {
     // Wait until process is out from syscall to call stat
     // on newly created directory.
 
@@ -292,7 +292,7 @@ void Tracer::handle_mkdir_at_path(tracee* process, const std::string& path) {
     report_file_op(PS::TRACER_EVENT_WRITE, process->get_pid(), path, &file_stat);
 }
 
-void Tracer::handle_mkdir_syscall(tracee* process, const char* pathname, mode_t /*mode*/) {
+void Tracer::handle_mkdir_syscall(Tracee* process, const char* pathname, mode_t /*mode*/) {
     // TODO: handle read_string failure
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
@@ -301,7 +301,7 @@ void Tracer::handle_mkdir_syscall(tracee* process, const char* pathname, mode_t 
     handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
-void Tracer::handle_mkdirat_syscall(tracee* process, int dirfd, const char* pathname, mode_t mode) {
+void Tracer::handle_mkdirat_syscall(Tracee* process, int dirfd, const char* pathname, mode_t mode) {
     if (dirfd == AT_FDCWD) {
         handle_mkdir_syscall(process, pathname, mode);
         return;
@@ -313,7 +313,7 @@ void Tracer::handle_mkdirat_syscall(tracee* process, int dirfd, const char* path
     handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
-void Tracer::handle_rmdir_syscall(tracee* process, const char* pathname) {
+void Tracer::handle_rmdir_syscall(Tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
@@ -321,16 +321,16 @@ void Tracer::handle_rmdir_syscall(tracee* process, const char* pathname) {
 }
 
 // Handle rename as unlink of destination
-void Tracer::handle_rename_syscall(tracee* process, const char* /*oldpath*/, const char* newpath) {
+void Tracer::handle_rename_syscall(Tracee* process, const char* /*oldpath*/, const char* newpath) {
     handle_unlink_syscall(process, newpath);
 }
 
-void Tracer::handle_renameat_syscall(tracee* process, int /*olddirfd*/, const char* /*oldpath*/,
+void Tracer::handle_renameat_syscall(Tracee* process, int /*olddirfd*/, const char* /*oldpath*/,
                                      int newdirfd, const char* newpath) {
     handle_unlinkat_syscall(process, newdirfd, newpath, 0);
 }
 
-void Tracer::handle_renameat2_syscall(tracee* process, int /*olddirfd*/, const char* /*oldpath*/,
+void Tracer::handle_renameat2_syscall(Tracee* process, int /*olddirfd*/, const char* /*oldpath*/,
                                       int newdirfd, const char* newpath, int flags) {
     if (flags & RENAME_NOREPLACE || flags & RENAME_EXCHANGE)
         return;
@@ -338,7 +338,7 @@ void Tracer::handle_renameat2_syscall(tracee* process, int /*olddirfd*/, const c
     handle_unlinkat_syscall(process, newdirfd, newpath, 0);
 }
 
-void Tracer::handle_syscall(tracee* process) {
+void Tracer::handle_syscall(Tracee* process) {
     struct user_regs_struct state = {};
 
     // Kill the process if architecture is not x86-64
@@ -394,31 +394,31 @@ void Tracer::handle_syscall(tracee* process) {
     }
 }
 
-void Tracer::handle_fork_clone(tracee* process) {
+void Tracer::handle_fork_clone(Tracee* process) {
     pid_t forked_pid = (pid_t)process->ptrace_get_event_message();
     report_child(process->get_pid(), forked_pid);
 }
 
 /* MARK: Utilities */
 
-void Tracer::handle_possible_child(tracee* process) {
+void Tracer::handle_possible_child(Tracee* process) {
     if (process->stopped_at_fork_or_clone()) {
         handle_fork_clone(process);
     }
 }
 
-tracee* Tracer::get_process(pid_t pid) {
-    tracee* process = &processes[pid];
+Tracee* Tracer::get_process(pid_t pid) {
+    Tracee* process = &processes[pid];
     if (!process->initialized())
         process->initialize(pid);
     return process;
 }
 
-tracee* Tracer::wait_for_process() {
+Tracee* Tracer::wait_for_process() {
     int status = -1;
     pid_t pid = wait(&status);
     if (pid > 0) {
-        tracee* process = get_process(pid);
+        Tracee* process = get_process(pid);
         process->set_at_syscall_entry(status);
         return process;
     }

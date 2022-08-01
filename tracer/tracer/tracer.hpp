@@ -39,31 +39,31 @@ class Tracer {
 
     /* MARK: Syscall and fork handlers */
 
-    void report_read_write_for_flags(tracee* process, int fd, unsigned long long flags);
-    void handle_open_syscall(tracee* process, const char* pathname, int flags, mode_t mode);
-    void handle_openat_syscall(tracee* process, int dirfd, const char* pathname, int flags,
+    void report_read_write_for_flags(Tracee* process, int fd, unsigned long long flags);
+    void handle_open_syscall(Tracee* process, const char* pathname, int flags, mode_t mode);
+    void handle_openat_syscall(Tracee* process, int dirfd, const char* pathname, int flags,
                                mode_t mode);
-    void handle_openat2_syscall(tracee* process, int dirfd, const char* pathname,
+    void handle_openat2_syscall(Tracee* process, int dirfd, const char* pathname,
                                 struct open_how* how, size_t size);
 
-    void handle_creat_syscall(tracee* process, const char* pathname, mode_t mode);
-    void handle_unlink_syscall(tracee* process, const char* pathname);
-    void handle_unlinkat_syscall(tracee* process, int dirfd, const char* path, int flag);
-    void handle_syscall(tracee* process);
+    void handle_creat_syscall(Tracee* process, const char* pathname, mode_t mode);
+    void handle_unlink_syscall(Tracee* process, const char* pathname);
+    void handle_unlinkat_syscall(Tracee* process, int dirfd, const char* path, int flag);
+    void handle_syscall(Tracee* process);
 
-    void handle_rename_syscall(tracee* process, const char* oldpath, const char* newpath);
-    void handle_renameat_syscall(tracee* process, int olddirfd, const char* oldpath, int newdirfd,
+    void handle_rename_syscall(Tracee* process, const char* oldpath, const char* newpath);
+    void handle_renameat_syscall(Tracee* process, int olddirfd, const char* oldpath, int newdirfd,
                                  const char* newpath);
-    void handle_renameat2_syscall(tracee* process, int olddirfd, const char* oldpath, int newdirfd,
+    void handle_renameat2_syscall(Tracee* process, int olddirfd, const char* oldpath, int newdirfd,
                                   const char* newpath, int flags);
 
-    void handle_mkdir_at_path(tracee* process, const std::string& path);
-    void handle_mkdir_syscall(tracee* process, const char* pathname, mode_t /*mode*/);
-    void handle_mkdirat_syscall(tracee* process, int dirfd, const char* pathname, mode_t mode);
-    void handle_rmdir_syscall(tracee* process, const char* pathname);
+    void handle_mkdir_at_path(Tracee* process, const std::string& path);
+    void handle_mkdir_syscall(Tracee* process, const char* pathname, mode_t /*mode*/);
+    void handle_mkdirat_syscall(Tracee* process, int dirfd, const char* pathname, mode_t mode);
+    void handle_rmdir_syscall(Tracee* process, const char* pathname);
 
-    void handle_fork_clone(tracee* process);
-    void handle_possible_child(tracee* process);
+    void handle_fork_clone(Tracee* process);
+    void handle_possible_child(Tracee* process);
 
     /* MARK: Socket methods */
     bool connect_to_socket();
@@ -75,9 +75,9 @@ class Tracer {
 
     /* MARK: Utilities */
 
-    tracee* get_process(pid_t pid);
-    tracee* wait_for_process();
-    void unlink_path(tracee* process, const std::string& path);
+    Tracee* get_process(pid_t pid);
+    Tracee* wait_for_process();
+    void unlink_path(Tracee* process, const std::string& path);
 
     /* MARK: Private fields */
 
@@ -86,5 +86,5 @@ class Tracer {
     DaemonClient m_socket{};
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;
-    std::unordered_map<pid_t, tracee> processes{};
+    std::unordered_map<pid_t, Tracee> processes{};
 };

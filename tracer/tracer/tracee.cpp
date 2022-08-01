@@ -5,21 +5,21 @@
 #include <linux/elf.h>
 #include <sys/uio.h>
 
-bool tracee::initialized() const { return m_pid >= 0; }
+bool Tracee::initialized() const { return m_pid >= 0; }
 
-void tracee::initialize(int pid) {
+void Tracee::initialize(int pid) {
     assert(m_pid == -1 && pid != -1);
     m_pid = pid;
 }
 
-void tracee::set_at_syscall_entry(int status) {
+void Tracee::set_at_syscall_entry(int status) {
     m_status = status;
     m_is_at_syscall_entry = true;
 }
 
-bool tracee::is_at_syscall_entry() const { return m_is_at_syscall_entry; }
+bool Tracee::is_at_syscall_entry() const { return m_is_at_syscall_entry; }
 
-void tracee::exit_from_syscall() {
+void Tracee::exit_from_syscall() {
     if (!m_is_at_syscall_entry)
         return;
 
@@ -27,7 +27,7 @@ void tracee::exit_from_syscall() {
     wait();
 }
 
-unsigned long long int tracee::get_syscall_return_code() {
+unsigned long long int Tracee::get_syscall_return_code() {
     exit_from_syscall();
     if (!stopped_at_syscall()) {
         // Perhaps, it happened to be a faulty syscall
@@ -40,7 +40,7 @@ unsigned long long int tracee::get_syscall_return_code() {
     return state.rax;
 }
 
-bool tracee::stopped_at_fork_or_clone() {
+bool Tracee::stopped_at_fork_or_clone() {
     if (!WIFSTOPPED(m_status)) {
         return false;
     }
@@ -52,15 +52,15 @@ bool tracee::stopped_at_fork_or_clone() {
            sig == (SIGTRAP | (PTRACE_EVENT_CLONE << 8));
 }
 
-bool tracee::stopped_at_seccomp() {
+bool Tracee::stopped_at_seccomp() {
     return (m_status >> 8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8))) != 0;
 }
 
-bool tracee::stopped_at_syscall() {
+bool Tracee::stopped_at_syscall() {
     return WIFSTOPPED(m_status) && (WSTOPSIG(m_status) & 0x80) != 0;
 }
 
-bool tracee::stopped_at_signal() {
+bool Tracee::stopped_at_signal() {
     if (!WIFSTOPPED(m_status)) {
         return false;
     }
@@ -69,13 +69,13 @@ bool tracee::stopped_at_signal() {
     return (sig & ~0x7F) == 0;
 }
 
-unsigned long tracee::ptrace_get_event_message() {
+unsigned long Tracee::ptrace_get_event_message() {
     unsigned long result = 0;
     ptrace(PTRACE_GETEVENTMSG, m_pid, 0, &result);
     return result;
 }
 
-bool tracee::ptrace_get_registers(struct user_regs_struct* regs) {
+bool Tracee::ptrace_get_registers(struct user_regs_struct* regs) {
     struct iovec io;
     io.iov_base = regs;
     io.iov_len = sizeof(*regs);
@@ -85,11 +85,11 @@ bool tracee::ptrace_get_registers(struct user_regs_struct* regs) {
     return io.iov_len == sizeof(*regs);
 }
 
-void tracee::ptrace_continue() { ptrace_continue_with_request(PTRACE_CONT); }
+void Tracee::ptrace_continue() { ptrace_continue_with_request(PTRACE_CONT); }
 
-void tracee::ptrace_continue_to_syscall() { ptrace_continue_with_request(PTRACE_SYSCALL); }
+void Tracee::ptrace_continue_to_syscall() { ptrace_continue_with_request(PTRACE_SYSCALL); }
 
-void tracee::ptrace_continue_with_request(enum __ptrace_request request) {
+void Tracee::ptrace_continue_with_request(enum __ptrace_request request) {
     if (stopped_at_signal()) {
         ptrace(request, m_pid, 0, WSTOPSIG(m_status));
     } else {
@@ -100,9 +100,9 @@ void tracee::ptrace_continue_with_request(enum __ptrace_request request) {
     m_is_at_syscall_entry = false;
 }
 
-void tracee::wait() { waitpid(m_pid, &m_status, 0); }
+void Tracee::wait() { waitpid(m_pid, &m_status, 0); }
 
-void tracee::get_stat_for_fd(int fd, struct stat* file_stat) {
+void Tracee::get_stat_for_fd(int fd, struct stat* file_stat) {
     std::stringstream stat_path_stream;
 
     stat_path_stream << "/proc/" << m_pid << "/fd/" << fd;
@@ -111,7 +111,7 @@ void tracee::get_stat_for_fd(int fd, struct stat* file_stat) {
     stat(stat_path.c_str(), file_stat);
 }
 
-std::filesystem::path tracee::get_path_for_fd(int fd) {
+std::filesystem::path Tracee::get_path_for_fd(int fd) {
     std::stringstream symlink_path_stream;
 
     symlink_path_stream << "/proc/" << m_pid << "/fd/" << fd;
@@ -120,7 +120,7 @@ std::filesystem::path tracee::get_path_for_fd(int fd) {
     return std::filesystem::read_symlink(symlink_path);
 }
 
-std::filesystem::path tracee::get_cwd() {
+std::filesystem::path Tracee::get_cwd() {
     std::stringstream symlink_path_stream;
 
     symlink_path_stream << "/proc/" << m_pid << "/cwd";
@@ -129,7 +129,7 @@ std::filesystem::path tracee::get_cwd() {
     return std::filesystem::read_symlink(symlink_path);
 }
 
-uint64_t tracee::read_word(void* process_addr) {
+uint64_t Tracee::read_word(void* process_addr) {
     uint64_t word = ptrace(PTRACE_PEEKTEXT, m_pid, process_addr, NULL);
     if (errno) {
         perror("PTRACE_PEEKTEXT");
@@ -138,7 +138,7 @@ uint64_t tracee::read_word(void* process_addr) {
     return word;
 }
 
-std::string tracee::read_string(const char* process_addr) {
+std::string Tracee::read_string(const char* process_addr) {
     uint64_t block_addr = (uint64_t)process_addr;
     unsigned char_index = (unsigned)(block_addr % 8);
     block_addr -= char_index;
@@ -164,6 +164,6 @@ std::string tracee::read_string(const char* process_addr) {
     }
 }
 
-int tracee::get_pid() { return m_pid; }
+int Tracee::get_pid() { return m_pid; }
 
-int tracee::get_status() { return m_status; }
+int Tracee::get_status() { return m_status; }

@@ -16,14 +16,14 @@
 
 class Tracer;
 
-class tracee {
+class Tracee {
   public:
-    tracee() = default;
-    ~tracee() = default;
-    tracee(const tracee& copy) = delete;
-    tracee& operator=(const tracee& copy_assign) = delete;
-    tracee(tracee&& move) = default;
-    tracee& operator=(tracee&& move_assign) = default;
+    Tracee() = default;
+    ~Tracee() = default;
+    Tracee(const Tracee& copy) = delete;
+    Tracee& operator=(const Tracee& copy_assign) = delete;
+    Tracee(Tracee&& move) = default;
+    Tracee& operator=(Tracee&& move_assign) = default;
 
     bool initialized() const;
     void initialize(int pid);
