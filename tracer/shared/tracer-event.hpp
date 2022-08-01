@@ -12,8 +12,9 @@ enum TracerEventType : char {
     TRACER_EVENT_WRITE = 1,
     TRACER_EVENT_READ_WRITE = 2,
     TRACER_EVENT_UNLINK = 3,
-    TRACER_EVENT_CHILD = 4,
-    TRACER_EVENT_DONE = 5
+    TRACER_EVENT_INODE_RELEASE = 4,
+    TRACER_EVENT_CHILD = 5,
+    TRACER_EVENT_DONE = 6
 };
 
 struct TracerChildEvent {

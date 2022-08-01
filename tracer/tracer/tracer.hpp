@@ -57,6 +57,11 @@ class tracer {
     void handle_renameat2_syscall(tracee* process, int olddirfd, const char* oldpath, int newdirfd,
                                   const char* newpath, int flags);
 
+    void handle_mkdir_at_path(tracee* process, const std::string& path);
+    void handle_mkdir_syscall(tracee* process, const char* pathname, mode_t /*mode*/);
+    void handle_mkdirat_syscall(tracee* process, int dirfd, const char* pathname, mode_t mode);
+    void handle_rmdir_syscall(tracee* process, const char* pathname);
+
     void handle_fork_clone(tracee* process);
     void handle_possible_child(tracee* process);
 
@@ -72,7 +77,7 @@ class tracer {
 
     tracee* get_process(pid_t pid);
     tracee* wait_for_process();
-    void unlink_path(pid_t pid, const std::string& path);
+    void unlink_path(tracee* process, const std::string& path);
 
     /* MARK: Private fields */
 

@@ -175,6 +175,9 @@ void tracer::setup_seccomp() {
 
         // Check the syscall id
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_mkdirat, 12, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_mkdir, 11, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rmdir, 10, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rename, 9, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_renameat, 8, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_renameat2, 7, 0),
@@ -218,21 +221,28 @@ void tracer::report_read_write_for_flags(tracee* process, int fd, unsigned long 
     report_file_op(event, pid, path, &file_stat);
 }
 
-void tracer::unlink_path(pid_t pid, const std::string& path) {
+void tracer::unlink_path(tracee* process, const std::string& path) {
     struct stat file_stat {};
 
     // Using lstat here as unlink does not resolve symlinks
     if (lstat(path.c_str(), &file_stat) < 0)
         return;
 
-    report_file_op(PS::TRACER_EVENT_UNLINK, pid, path, &file_stat);
+    bool is_inode_released = file_stat.st_nlink <= 1;
+    bool is_unlink_successful = process->get_syscall_return_code() == 0;
+
+    report_file_op(PS::TRACER_EVENT_UNLINK, process->get_pid(), path, &file_stat);
+
+    if (is_inode_released && is_unlink_successful) {
+        report_file_op(PS::TRACER_EVENT_INODE_RELEASE, process->get_pid(), "", &file_stat);
+    }
 }
 
 void tracer::handle_unlink_syscall(tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
-    unlink_path(process->get_pid(), std::filesystem::weakly_canonical(filepath));
+    unlink_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
 void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pathname,
@@ -246,7 +256,7 @@ void tracer::handle_unlinkat_syscall(tracee* process, int dirfd, const char* pat
     std::filesystem::path filepath = process->get_path_for_fd(dirfd);
     filepath /= process->read_string(pathname);
 
-    unlink_path(process->get_pid(), std::filesystem::weakly_canonical(filepath));
+    unlink_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
 void tracer::handle_open_syscall(tracee* process, const char* /*pathname*/, int flags,
@@ -267,6 +277,47 @@ void tracer::handle_openat2_syscall(tracee* process, int /*dirfd*/, const char* 
 void tracer::handle_creat_syscall(tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
     report_read_write_for_flags(process, (int)process->get_syscall_return_code(),
                                 O_WRONLY | O_CREAT | O_TRUNC);
+}
+
+void tracer::handle_mkdir_at_path(tracee* process, const std::string& path) {
+    // Wait until process is out from syscall to call stat
+    // on newly created directory.
+
+    process->exit_from_syscall();
+    struct stat file_stat {};
+
+    if (stat(path.c_str(), &file_stat) < 0)
+        return;
+
+    report_file_op(PS::TRACER_EVENT_WRITE, process->get_pid(), path, &file_stat);
+}
+
+void tracer::handle_mkdir_syscall(tracee* process, const char* pathname, mode_t /*mode*/) {
+    // TODO: handle read_string failure
+    std::filesystem::path filepath = process->get_cwd();
+    filepath /= process->read_string(pathname);
+
+    // TODO: maybe move weakly_canonical into handle_mkdir_at_path method?
+    handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
+}
+
+void tracer::handle_mkdirat_syscall(tracee* process, int dirfd, const char* pathname, mode_t mode) {
+    if (dirfd == AT_FDCWD) {
+        handle_mkdir_syscall(process, pathname, mode);
+        return;
+    }
+
+    // TODO: handle read_string failure
+    std::filesystem::path filepath = process->get_path_for_fd(dirfd);
+    filepath /= process->read_string(pathname);
+    handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
+}
+
+void tracer::handle_rmdir_syscall(tracee* process, const char* pathname) {
+    std::filesystem::path filepath = process->get_cwd();
+    filepath /= process->read_string(pathname);
+
+    unlink_path(process, std::filesystem::weakly_canonical(filepath));
 }
 
 // Handle rename as unlink of destination
@@ -328,6 +379,15 @@ void tracer::handle_syscall(tracee* process) {
     case SYS_renameat2:
         handle_renameat2_syscall(process, (int)state.rdi, (char*)state.rsi, (int)state.rdx,
                                  (char*)state.r10, (int)state.r11);
+        break;
+    case SYS_mkdir:
+        handle_mkdir_syscall(process, (char*)state.rdi, (mode_t)state.rsi);
+        break;
+    case SYS_mkdirat:
+        handle_mkdirat_syscall(process, (int)state.rdi, (char*)state.rsi, (mode_t)state.rdx);
+        break;
+    case SYS_rmdir:
+        handle_rmdir_syscall(process, (char*)state.rdi);
         break;
     default:
         break;
