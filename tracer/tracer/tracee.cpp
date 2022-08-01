@@ -151,11 +151,12 @@ std::string tracee::read_string(const char* process_addr) {
 
         while (char_index++ < 8) {
             char next_character = *(string_part++);
-            ss << next_character;
 
             if (next_character == '\0') {
                 return ss.str();
             }
+
+            ss << next_character;
         }
 
         block_addr += 8;
