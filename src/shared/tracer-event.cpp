@@ -3,11 +3,6 @@
 
 namespace PS {
 
-bool is_file_operation(TracerEventType event) {
-    return event == TRACER_EVENT_READ || event == TRACER_EVENT_WRITE ||
-           event == TRACER_EVENT_READ_WRITE || event == TRACER_EVENT_UNLINK;
-}
-
 FileAccessType get_file_operation(TracerEventType event) {
     switch (event) {
     case TRACER_EVENT_READ:

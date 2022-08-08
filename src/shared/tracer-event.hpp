@@ -18,9 +18,6 @@ enum TracerEventType : char {
     TRACER_EVENT_DONE = 6
 };
 
-bool is_file_operation(TracerEventType event);
-FileAccessType get_file_operation(TracerEventType event);
-
 struct TracerChildEvent {
     pid_t pid;
     pid_t ppid;
@@ -30,5 +27,7 @@ struct TracerFileEvent {
     pid_t pid;
     Entry file_entry;
 };
+
+FileAccessType get_file_operation(TracerEventType event);
 
 } // namespace PS
