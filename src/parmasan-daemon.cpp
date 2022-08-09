@@ -71,6 +71,9 @@ bool PS::ParmasanDaemon::read_init_packet(DaemonConnection* connection, size_t l
         connection->data = std::make_unique<TracerConnectionData>(connection);
         auto tracer_data = (TracerConnectionData*)connection->data.get();
         m_tracers.insert(tracer_data);
+    } else {
+        std::cerr << "Unrecognized mode: 0x" << std::hex << +mode << "\n";
+        return false;
     }
 
     connection->data->m_state = mode;
