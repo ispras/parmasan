@@ -9,7 +9,7 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    if (!daemon.listen("/tmp/parmasan-socket.sock")) {
+    if (!daemon.listen_abstract("parmasan-socket")) {
         std::cerr << "Failed to bind to socket\n";
         return EXIT_FAILURE;
     }

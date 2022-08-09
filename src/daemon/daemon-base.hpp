@@ -33,7 +33,8 @@ template <typename ConnectionData> class DaemonBase {
     // MARK: Unix socket life cycle
 
     bool create_socket();
-    bool listen(const char* socket, int request_queue_length = 4096);
+    bool listen_abstract(const char* socket_name, int request_queue_length = 4096);
+    bool listen(const char* socket_name, size_t socket_length = 0, int request_queue_length = 4096);
     void loop();
     void handle_connection_data(DaemonConnection* connection);
 
@@ -76,11 +77,31 @@ template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socke
 }
 
 template <typename ConnectionData>
-bool DaemonBase<ConnectionData>::listen(const char* socket, int request_queue_length) {
+bool DaemonBase<ConnectionData>::listen_abstract(const char* socket_name,
+                                                 int request_queue_length) {
+    return listen(socket_name, strlen(socket_name + 1) + 1, request_queue_length);
+}
+
+template <typename ConnectionData>
+bool DaemonBase<ConnectionData>::listen(const char* socket_name, size_t socket_length,
+                                        int request_queue_length) {
+    if (socket_length == 0) {
+        socket_length = strlen(socket_name);
+    }
+
     struct sockaddr_un server_address {};
     server_address.sun_family = AF_UNIX;
-    unlink(socket);
-    strcpy(server_address.sun_path, socket);
+
+    if (socket_length >= sizeof(server_address.sun_path)) {
+        socket_length = sizeof(server_address.sun_path) - 1;
+    }
+
+    // Remove old socket file if it's not abstract
+    if (socket_name[0] == '\0' && socket_length > 0) {
+        unlink(socket_name);
+    }
+
+    memcpy(server_address.sun_path, socket_name, socket_length + 1);
 
     if (bind(m_server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
         perror("bind failed");
