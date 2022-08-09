@@ -78,7 +78,7 @@ bool Tracer::connect_to_socket() {
         return false;
     }
 
-    if (!m_socket.connect(m_socket_path.c_str())) {
+    if (!m_socket.connect(m_socket_path)) {
         fprintf(stderr, "Failed to connect to parmasan daemon. Is it up?\n");
         return false;
     }

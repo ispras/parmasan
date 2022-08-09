@@ -13,7 +13,7 @@
 
 class Tracer {
   public:
-    Tracer(const std::string& socket_path) : m_socket_path(socket_path) {}
+    Tracer(const char* socket_path) : m_socket_path(socket_path) {}
     ~Tracer() = default;
     Tracer(const Tracer& copy) = delete;
     Tracer& operator=(const Tracer& copy_assign) = delete;
@@ -82,7 +82,7 @@ class Tracer {
     /* MARK: Private fields */
 
     SerialBuffer m_output_buffer{};
-    std::string m_socket_path;
+    const char* m_socket_path;
     DaemonClient m_socket{};
     pid_t m_child_pid = -1;
     bool m_bpf_enabled = true;

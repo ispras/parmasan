@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    Tracer t("/tmp/parmasan-socket.sock");
+    Tracer t("\0parmasan-socket");
     t.trace(argv + 1);
 
     return 0;

@@ -30,12 +30,29 @@ class DaemonClient {
         return true;
     }
 
-    bool connect(const char* socket) {
+    bool connect(const char* socket_name) {
+        assert(socket_name);
         m_server_address.sun_family = AF_UNIX;
-        strncpy(m_server_address.sun_path, socket, sizeof(m_server_address.sun_path) - 1);
+
+        size_t socket_length = 0;
+        if (socket_name[0] == '\0') {
+            socket_length = strlen(socket_name + 1) + 1;
+        } else {
+            socket_length = strlen(socket_name);
+        }
+
+        if (socket_length == 0) {
+            socket_length = strlen(socket_name);
+        }
+
+        if (socket_length >= sizeof(m_server_address.sun_path)) {
+            socket_length = sizeof(m_server_address.sun_path) - 1;
+        }
+
+        memcpy(m_server_address.sun_path, socket_name, socket_length);
 
         int connection_result = ::connect(m_client_socket, (struct sockaddr*)&m_server_address,
-                                          sizeof(m_server_address));
+                                          sizeof(m_server_address.sun_family) + socket_length);
         if (connection_result < 0) {
             perror("connect");
             return false;
