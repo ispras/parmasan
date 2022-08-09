@@ -135,12 +135,12 @@ void DaemonBase<ConnectionData>::handle_connection_data(DaemonConnection* connec
             perror("recv");
             connection->close();
         }
-
-        if (!connection->is_open()) {
-            stop_listening_socket(connection);
-            handle_disconnection(connection);
-        }
     }
+
+    assert(!connection->is_open());
+    stop_listening_socket(connection);
+    handle_disconnection(connection);
+    m_connections.erase(connection->descriptor);
 }
 
 template <typename ConnectionData>
