@@ -33,7 +33,7 @@ template <typename ConnectionData> class DaemonBase {
     // MARK: Unix socket life cycle
 
     bool create_socket();
-    bool listen(const std::string& socket_name, int request_queue_length = 4096);
+    bool listen(const char* socket_name, int request_queue_length = 4096);
     void loop();
     void handle_connection_data(DaemonConnection* connection);
 
@@ -76,8 +76,13 @@ template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socke
 }
 
 template <typename ConnectionData>
-bool DaemonBase<ConnectionData>::listen(const std::string& socket_name, int request_queue_length) {
-    size_t socket_length = socket_name.size();
+bool DaemonBase<ConnectionData>::listen(const char* socket_name, int request_queue_length) {
+    size_t socket_length = 0;
+    if(socket_name[0] == '\0') {
+        socket_length = strlen(socket_name + 1) + 1;
+    } else {
+        socket_length = strlen(socket_name);
+    }
 
     struct sockaddr_un server_address {};
     server_address.sun_family = AF_UNIX;
@@ -88,10 +93,10 @@ bool DaemonBase<ConnectionData>::listen(const std::string& socket_name, int requ
 
     // Remove old socket file if it's not abstract
     if (socket_name[0] == '\0' && socket_length > 0) {
-        unlink(socket_name.c_str());
+        unlink(socket_name);
     }
 
-    memcpy(server_address.sun_path, socket_name.c_str(), socket_length + 1);
+    memcpy(server_address.sun_path, socket_name, socket_length + 1);
 
     if (bind(m_server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
         perror("bind failed");
