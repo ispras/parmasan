@@ -77,6 +77,7 @@ template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socke
 
 template <typename ConnectionData>
 bool DaemonBase<ConnectionData>::listen(const char* socket_name, int request_queue_length) {
+    assert(socket_name);
     size_t socket_length = 0;
     if (socket_name[0] == '\0') {
         socket_length = strlen(socket_name + 1) + 1;
