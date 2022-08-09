@@ -78,7 +78,7 @@ template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socke
 template <typename ConnectionData>
 bool DaemonBase<ConnectionData>::listen(const char* socket_name, int request_queue_length) {
     size_t socket_length = 0;
-    if(socket_name[0] == '\0') {
+    if (socket_name[0] == '\0') {
         socket_length = strlen(socket_name + 1) + 1;
     } else {
         socket_length = strlen(socket_name);
@@ -96,9 +96,10 @@ bool DaemonBase<ConnectionData>::listen(const char* socket_name, int request_que
         unlink(socket_name);
     }
 
-    memcpy(server_address.sun_path, socket_name, socket_length + 1);
+    memcpy(server_address.sun_path, socket_name, socket_length);
 
-    if (bind(m_server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
+    if (bind(m_server_socket, (struct sockaddr*)&server_address,
+             sizeof(server_address.sun_family) + socket_length) < 0) {
         perror("bind failed");
         return false;
     }
