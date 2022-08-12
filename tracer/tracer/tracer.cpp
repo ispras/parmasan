@@ -32,13 +32,13 @@ void Tracer::trace(char* argv[]) {
 
 void Tracer::report_file_op(PS::TracerEventType type, pid_t pid, const std::string& path,
                             struct stat* stat) {
-    assert(path == std::filesystem::weakly_canonical(path));
+    std::string normalized_path = std::filesystem::path(path).lexically_normal();
     PS::TracerFileEvent event = {.pid = pid,
                                  .file_entry = {.device = stat->st_dev, .inode = stat->st_ino}};
     m_output_buffer.clear();
     m_output_buffer.write(&type);
     m_output_buffer.write(&event);
-    m_output_buffer.write_string(path);
+    m_output_buffer.write_string(normalized_path);
     m_socket.send(m_output_buffer.data(), m_output_buffer.size());
 }
 
@@ -242,7 +242,7 @@ void Tracer::handle_unlink_syscall(Tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
-    unlink_path(process, std::filesystem::weakly_canonical(filepath));
+    unlink_path(process, filepath);
 }
 
 void Tracer::handle_unlinkat_syscall(Tracee* process, int dirfd, const char* pathname,
@@ -256,7 +256,7 @@ void Tracer::handle_unlinkat_syscall(Tracee* process, int dirfd, const char* pat
     std::filesystem::path filepath = process->get_path_for_fd(dirfd);
     filepath /= process->read_string(pathname);
 
-    unlink_path(process, std::filesystem::weakly_canonical(filepath));
+    unlink_path(process, filepath);
 }
 
 void Tracer::handle_open_syscall(Tracee* process, const char* /*pathname*/, int flags,
@@ -299,9 +299,7 @@ void Tracer::handle_mkdir_syscall(Tracee* process, const char* pathname, mode_t 
     // TODO: handle read_string failure
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
-
-    // TODO: maybe move weakly_canonical into handle_mkdir_at_path method?
-    handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
+    handle_mkdir_at_path(process, filepath);
 }
 
 void Tracer::handle_mkdirat_syscall(Tracee* process, int dirfd, const char* pathname, mode_t mode) {
@@ -313,14 +311,14 @@ void Tracer::handle_mkdirat_syscall(Tracee* process, int dirfd, const char* path
     // TODO: handle read_string failure
     std::filesystem::path filepath = process->get_path_for_fd(dirfd);
     filepath /= process->read_string(pathname);
-    handle_mkdir_at_path(process, std::filesystem::weakly_canonical(filepath));
+    handle_mkdir_at_path(process, filepath);
 }
 
 void Tracer::handle_rmdir_syscall(Tracee* process, const char* pathname) {
     std::filesystem::path filepath = process->get_cwd();
     filepath /= process->read_string(pathname);
 
-    unlink_path(process, std::filesystem::weakly_canonical(filepath));
+    unlink_path(process, filepath);
 }
 
 // Handle rename as unlink of destination
