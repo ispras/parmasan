@@ -11,7 +11,7 @@ void PS::ParmasanDaemon::handle_disconnection(DaemonConnection* connection) {
         return;
 
     if (data->m_state == CONNECTION_STATE_TRACER_PROCESS) {
-        auto tracer_data = (TracerConnectionData*)data;
+        auto tracer_data = static_cast<TracerConnectionData*>(data);
         m_tracers.erase(tracer_data);
     }
 }
@@ -55,22 +55,22 @@ bool PS::ParmasanDaemon::read_init_packet(DaemonConnection* connection, size_t l
         if (!reader.read(&make_pid))
             return false;
 
-        connection->data = std::make_unique<MakeConnectionData>(connection);
-        auto make_data = (MakeConnectionData*)connection->data.get();
+        auto make_data = std::make_unique<MakeConnectionData>(connection);
 
         TracerConnectionData* tracer = get_tracer_for_pid(make_pid);
         if (tracer) {
             make_data->attach_to_tracer(tracer);
-            tracer->make_process_attached(make_pid, make_data);
+            tracer->make_process_attached(make_pid, make_data.get());
         } else {
             std::cerr << "Warning: dangling make process pid=" << make_pid << "\n";
         }
 
         make_data->send_acknowledgement_packet();
+        connection->data = std::move(make_data);
     } else if (mode == CONNECTION_STATE_TRACER_PROCESS) {
-        connection->data = std::make_unique<TracerConnectionData>(connection);
-        auto tracer_data = (TracerConnectionData*)connection->data.get();
-        m_tracers.insert(tracer_data);
+        auto tracer_data = std::make_unique<TracerConnectionData>(connection);
+        m_tracers.insert(tracer_data.get());
+        connection->data = std::move(tracer_data);
     } else {
         std::cerr << "Unrecognized mode: 0x" << std::hex << +mode << "\n";
         return false;

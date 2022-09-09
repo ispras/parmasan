@@ -40,7 +40,7 @@ void RaceSearchEngine::search_for_races(EntryData* entry) {
     // pairs of neighboring accesses for ordering in order to prove that all pairs of file accesses
     // are ordered.
 
-    for (int i = 1; i < entry->accesses.size(); i++) {
+    for (size_t i = 1; i < entry->accesses.size(); i++) {
         auto& access_a = entry->accesses[i - 1];
         auto& access_b = entry->accesses[i];
         if (access_a.access_type == FileAccessType::inode_release)

@@ -30,7 +30,7 @@ class File {
             m_name.pop_back();
         }
     }
-    explicit File(const char* name) : File((std::string)name) {}
+    explicit File(const char* name) : File(std::string(name)) {}
 
     File* get_child(const std::string& child_name);
 

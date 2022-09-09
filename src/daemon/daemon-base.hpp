@@ -99,7 +99,7 @@ bool DaemonBase<ConnectionData>::listen(const char* socket_name, int request_que
 
     memcpy(server_address.sun_path, socket_name, socket_length);
 
-    if (bind(m_server_socket, (struct sockaddr*)&server_address,
+    if (bind(m_server_socket, reinterpret_cast<struct sockaddr*>(&server_address),
              sizeof(server_address.sun_family) + socket_length) < 0) {
         perror("bind failed");
         return false;
@@ -120,7 +120,7 @@ void DaemonBase<ConnectionData>::handle_connection_data(DaemonConnection* connec
         ssize_t packet_length = connection->get_packet_length();
 
         if (packet_length > 0) {
-            if ((size_t)packet_length > m_buffer.size())
+            if (static_cast<size_t>(packet_length) > m_buffer.size())
                 m_buffer.resize(packet_length);
 
             packet_length = connection->receive(m_buffer.data(), m_buffer.size());
