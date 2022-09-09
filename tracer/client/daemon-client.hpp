@@ -51,8 +51,9 @@ class DaemonClient {
 
         memcpy(m_server_address.sun_path, socket_name, socket_length);
 
-        int connection_result = ::connect(m_client_socket, (struct sockaddr*)&m_server_address,
-                                          sizeof(m_server_address.sun_family) + socket_length);
+        int connection_result =
+            ::connect(m_client_socket, reinterpret_cast<struct sockaddr*>(&m_server_address),
+                      sizeof(m_server_address.sun_family) + socket_length);
         if (connection_result < 0) {
             perror("connect");
             return false;

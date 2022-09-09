@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <string>
 #include <vector>
 
 class SerialBuffer {
@@ -10,7 +11,8 @@ class SerialBuffer {
     SerialBuffer(const SerialBuffer& copy) = default;
 
     template <typename T> bool write(T* target) {
-        m_buffer.insert(m_buffer.end(), (char*)target, (char*)(target + 1));
+        m_buffer.insert(m_buffer.end(), reinterpret_cast<char*>(target),
+                        reinterpret_cast<char*>(target + 1));
         return true;
     }
 

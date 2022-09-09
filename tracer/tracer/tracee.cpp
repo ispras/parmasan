@@ -129,7 +129,7 @@ std::filesystem::path Tracee::get_cwd() {
     return std::filesystem::read_symlink(symlink_path);
 }
 
-uint64_t Tracee::read_word(void* process_addr) {
+uint64_t Tracee::read_word(const void* process_addr) {
     uint64_t word = ptrace(PTRACE_PEEKTEXT, m_pid, process_addr, NULL);
     if (errno) {
         perror("PTRACE_PEEKTEXT");
@@ -139,15 +139,14 @@ uint64_t Tracee::read_word(void* process_addr) {
 }
 
 std::string Tracee::read_string(const char* process_addr) {
-    uint64_t block_addr = (uint64_t)process_addr;
-    unsigned char_index = (unsigned)(block_addr % 8);
-    block_addr -= char_index;
+    unsigned char_index = static_cast<unsigned>(reinterpret_cast<uint64_t>(process_addr) % 8);
+    const char* block_addr = process_addr - char_index;
 
     std::stringstream ss;
 
     while (true) {
-        uint64_t process_word = read_word((void*)block_addr);
-        const char* string_part = (const char*)&process_word + char_index;
+        uint64_t process_word = read_word(block_addr);
+        const char* string_part = reinterpret_cast<const char*>(&process_word) + char_index;
 
         while (char_index++ < 8) {
             char next_character = *(string_part++);

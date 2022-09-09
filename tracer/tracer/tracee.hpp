@@ -54,7 +54,7 @@ class Tracee {
     void get_stat_for_fd(int fd, struct stat* file_stat);
     std::filesystem::path get_path_for_fd(int fd);
     std::filesystem::path get_cwd();
-    uint64_t read_word(void* process_addr);
+    uint64_t read_word(const void* process_addr);
     std::string read_string(const char* process_addr);
 
   private:

@@ -202,7 +202,7 @@ void Tracer::report_read_write_for_flags(Tracee* process, int fd, unsigned long 
     int pid = process->get_pid();
     struct stat file_stat {};
     process->get_stat_for_fd(fd, &file_stat);
-    std::string path = (std::string)process->get_path_for_fd(fd);
+    std::string path = process->get_path_for_fd(fd);
 
     flags &= O_ACCMODE;
 
@@ -261,22 +261,25 @@ void Tracer::handle_unlinkat_syscall(Tracee* process, int dirfd, const char* pat
 
 void Tracer::handle_open_syscall(Tracee* process, const char* /*pathname*/, int flags,
                                  mode_t /*mode*/) {
-    report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
+    int fd = static_cast<int>(process->get_syscall_return_code());
+    report_read_write_for_flags(process, fd, flags);
 }
 
 void Tracer::handle_openat_syscall(Tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                    int flags, mode_t /*mode*/) {
-    report_read_write_for_flags(process, (int)process->get_syscall_return_code(), flags);
+    int fd = static_cast<int>(process->get_syscall_return_code());
+    report_read_write_for_flags(process, fd, flags);
 }
 
 void Tracer::handle_openat2_syscall(Tracee* process, int /*dirfd*/, const char* /*pathname*/,
                                     struct open_how* how, size_t /*size*/) {
-    report_read_write_for_flags(process, (int)process->get_syscall_return_code(), how->flags);
+    int fd = static_cast<int>(process->get_syscall_return_code());
+    report_read_write_for_flags(process, fd, how->flags);
 }
 
 void Tracer::handle_creat_syscall(Tracee* process, const char* /*pathname*/, mode_t /*mode*/) {
-    report_read_write_for_flags(process, (int)process->get_syscall_return_code(),
-                                O_WRONLY | O_CREAT | O_TRUNC);
+    int fd = static_cast<int>(process->get_syscall_return_code());
+    report_read_write_for_flags(process, fd, O_WRONLY | O_CREAT | O_TRUNC);
 }
 
 void Tracer::handle_mkdir_at_path(Tracee* process, const std::string& path) {
@@ -351,43 +354,53 @@ void Tracer::handle_syscall(Tracee* process) {
 
     switch (syscall_num) {
     case SYS_open:
-        handle_open_syscall(process, (char*)state.rdi, (int)state.rsi, state.rdx);
+        handle_open_syscall(process, reinterpret_cast<char*>(state.rdi),
+                            static_cast<int>(state.rsi), state.rdx);
         break;
     case SYS_openat:
-        handle_openat_syscall(process, (int)state.rdi, (char*)state.rsi, (int)state.rdx, state.r10);
+        handle_openat_syscall(process, static_cast<int>(state.rdi),
+                              reinterpret_cast<char*>(state.rsi), static_cast<int>(state.rdx),
+                              state.r10);
         break;
     case SYS_openat2:
-        handle_openat2_syscall(process, (int)state.rdi, (char*)state.rsi, (open_how*)state.rdx,
-                               state.r10);
+        handle_openat2_syscall(process, static_cast<int>(state.rdi),
+                               reinterpret_cast<char*>(state.rsi),
+                               reinterpret_cast<open_how*>(state.rdx), state.r10);
         break;
     case SYS_creat:
-        handle_creat_syscall(process, (const char*)state.rdi, state.rsi);
+        handle_creat_syscall(process, reinterpret_cast<const char*>(state.rdi), state.rsi);
         break;
     case SYS_unlink:
-        handle_unlink_syscall(process, (char*)state.rdi);
+        handle_unlink_syscall(process, reinterpret_cast<char*>(state.rdi));
         break;
     case SYS_unlinkat:
-        handle_unlinkat_syscall(process, (int)state.rdi, (char*)state.rsi, (int)state.rdx);
+        handle_unlinkat_syscall(process, static_cast<int>(state.rdi),
+                                reinterpret_cast<char*>(state.rsi), static_cast<int>(state.rdx));
         break;
     case SYS_rename:
-        handle_rename_syscall(process, (char*)state.rdi, (char*)state.rsi);
+        handle_rename_syscall(process, reinterpret_cast<char*>(state.rdi),
+                              reinterpret_cast<char*>(state.rsi));
         break;
     case SYS_renameat:
-        handle_renameat_syscall(process, (int)state.rdi, (char*)state.rsi, (int)state.rdx,
-                                (char*)state.r10);
+        handle_renameat_syscall(process, static_cast<int>(state.rdi),
+                                reinterpret_cast<char*>(state.rsi), static_cast<int>(state.rdx),
+                                reinterpret_cast<char*>(state.r10));
         break;
     case SYS_renameat2:
-        handle_renameat2_syscall(process, (int)state.rdi, (char*)state.rsi, (int)state.rdx,
-                                 (char*)state.r10, (int)state.r11);
+        handle_renameat2_syscall(process, static_cast<int>(state.rdi),
+                                 reinterpret_cast<char*>(state.rsi), static_cast<int>(state.rdx),
+                                 reinterpret_cast<char*>(state.r10), static_cast<int>(state.r11));
         break;
     case SYS_mkdir:
-        handle_mkdir_syscall(process, (char*)state.rdi, (mode_t)state.rsi);
+        handle_mkdir_syscall(process, reinterpret_cast<char*>(state.rdi),
+                             static_cast<mode_t>(state.rsi));
         break;
     case SYS_mkdirat:
-        handle_mkdirat_syscall(process, (int)state.rdi, (char*)state.rsi, (mode_t)state.rdx);
+        handle_mkdirat_syscall(process, static_cast<int>(state.rdi),
+                               reinterpret_cast<char*>(state.rsi), static_cast<mode_t>(state.rdx));
         break;
     case SYS_rmdir:
-        handle_rmdir_syscall(process, (char*)state.rdi);
+        handle_rmdir_syscall(process, reinterpret_cast<char*>(state.rdi));
         break;
     default:
         break;
@@ -395,7 +408,7 @@ void Tracer::handle_syscall(Tracee* process) {
 }
 
 void Tracer::handle_fork_clone(Tracee* process) {
-    pid_t forked_pid = (pid_t)process->ptrace_get_event_message();
+    pid_t forked_pid = static_cast<pid_t>(process->ptrace_get_event_message());
     report_child(process->get_pid(), forked_pid);
 }
 
