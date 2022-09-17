@@ -3,10 +3,12 @@
 #include "connection.hpp"
 #include <cassert>
 #include <cerrno>
+#include <csignal>
 #include <iostream>
 #include <memory>
 #include <sys/epoll.h>
 #include <sys/fcntl.h>
+#include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -40,19 +42,24 @@ template <typename ConnectionData> class DaemonBase {
   private:
     // MARK: Utilities
 
+    void handle_pending_signals();
+    bool setup_signal_handling();
     void connect_new_client();
-    int mark_socket_for_listening(int fd);
+    int add_fd_to_epoll_interest_list(int fd);
     int wait_for_events();
-    int stop_listening_socket(DaemonConnection* connection);
+    int remove_fd_from_epoll_interest_list(int fd);
 
   private:
+    int m_sig_fd = 0;
     int m_epoll_fd = 0;
     int m_server_socket = 0;
+    bool m_terminated = false;
     std::vector<struct epoll_event> m_epoll_events{};
 
   protected:
     std::unordered_map<int, std::unique_ptr<DaemonConnection>> m_connections{};
     std::vector<char> m_buffer{};
+    void clear_signal_handling();
 };
 
 template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socket() {
@@ -67,8 +74,31 @@ template <typename ConnectionData> bool DaemonBase<ConnectionData>::create_socke
 
     m_epoll_events.resize(MAX_EVENTS);
     m_epoll_fd = epoll_create1(0);
-    if (mark_socket_for_listening(m_server_socket) == -1) {
+    if (add_fd_to_epoll_interest_list(m_server_socket) == -1) {
         close(m_server_socket);
+        return false;
+    }
+
+    return true;
+}
+
+template <typename ConnectionData> bool DaemonBase<ConnectionData>::setup_signal_handling() {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGTERM);
+
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+        perror("sigprocmask");
+        return false;
+    }
+
+    m_sig_fd = signalfd(-1, &mask, 0);
+    if (m_sig_fd == -1) {
+        return false;
+    }
+
+    if (add_fd_to_epoll_interest_list(m_sig_fd) == -1) {
+        close(m_sig_fd);
         return false;
     }
 
@@ -138,26 +168,32 @@ void DaemonBase<ConnectionData>::handle_connection_data(DaemonConnection* connec
     }
 
     assert(!connection->is_open());
-    stop_listening_socket(connection);
+    remove_fd_from_epoll_interest_list(connection->descriptor);
     handle_disconnection(connection);
     m_connections.erase(connection->descriptor);
 }
 
 template <typename ConnectionData>
-int DaemonBase<ConnectionData>::stop_listening_socket(DaemonConnection* connection) {
-    return epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, connection->descriptor, nullptr);
+int DaemonBase<ConnectionData>::remove_fd_from_epoll_interest_list(int fd) {
+    return epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
 }
 
 template <typename ConnectionData> void DaemonBase<ConnectionData>::loop() {
+    if (!setup_signal_handling()) {
+        return;
+    }
+
     int events = 0;
 
-    while ((events = wait_for_events()) >= 0) {
+    while (!m_terminated && (events = wait_for_events()) >= 0) {
 
         for (int i = 0; i < events; i++) {
             int fd = m_epoll_events[i].data.fd;
 
             if (fd == m_server_socket) {
                 connect_new_client();
+            } else if (fd == m_sig_fd) {
+                handle_pending_signals();
             } else {
                 auto it = m_connections.find(fd);
                 if (it == m_connections.end())
@@ -168,6 +204,8 @@ template <typename ConnectionData> void DaemonBase<ConnectionData>::loop() {
             }
         }
     }
+
+    clear_signal_handling();
 }
 
 template <typename ConnectionData> void DaemonBase<ConnectionData>::connect_new_client() {
@@ -175,7 +213,7 @@ template <typename ConnectionData> void DaemonBase<ConnectionData>::connect_new_
     while ((new_socket = accept(m_server_socket, nullptr, nullptr)) >= 0) {
         auto it = m_connections.emplace(new_socket, std::make_unique<DaemonConnection>(new_socket));
         DaemonConnection* connection = it.first->second.get();
-        if (mark_socket_for_listening(new_socket) == 0) {
+        if (add_fd_to_epoll_interest_list(new_socket) == 0) {
             handle_connection(connection);
         }
     }
@@ -210,7 +248,7 @@ template <typename ConnectionData> DaemonBase<ConnectionData>::~DaemonBase() {
 }
 
 template <typename ConnectionData>
-int DaemonBase<ConnectionData>::mark_socket_for_listening(int fd) {
+int DaemonBase<ConnectionData>::add_fd_to_epoll_interest_list(int fd) {
 
     // Make socket non-blocking
 
@@ -236,4 +274,19 @@ int DaemonBase<ConnectionData>::mark_socket_for_listening(int fd) {
     }
 
     return 0;
+}
+template <typename ConnectionData> void DaemonBase<ConnectionData>::handle_pending_signals() {
+    struct signalfd_siginfo fdsi {};
+    ssize_t bytes = 0;
+
+    while ((bytes = read(m_sig_fd, &fdsi, sizeof(fdsi))) == sizeof(fdsi)) {
+        if (fdsi.ssi_signo == SIGTERM) {
+            m_terminated = true;
+        }
+    }
+    assert(bytes == -1 && (errno == EWOULDBLOCK || errno == EAGAIN));
+}
+template <typename ConnectionData> void DaemonBase<ConnectionData>::clear_signal_handling() {
+    remove_fd_from_epoll_interest_list(m_sig_fd);
+    close(m_sig_fd);
 }
