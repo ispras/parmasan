@@ -234,7 +234,7 @@ void Tracer::unlink_path(Tracee* process, const std::string& path) {
     report_file_op(PS::TRACER_EVENT_UNLINK, process->get_pid(), path, &file_stat);
 
     if (is_inode_released && is_unlink_successful) {
-        report_file_op(PS::TRACER_EVENT_INODE_UNLINK, process->get_pid(), "", &file_stat);
+        report_file_op(PS::TRACER_EVENT_INODE_UNLINK, process->get_pid(), path, &file_stat);
     }
 }
 
