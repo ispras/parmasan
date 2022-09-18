@@ -10,7 +10,7 @@
 
 namespace PS {
 
-struct MakeConnectionData;
+class MakeConnectionData;
 
 struct PIDData {
     pid_t ppid;
