@@ -40,7 +40,7 @@ struct RequiredDependencyGenerator {
         update_is_right_critical();
     }
 
-    bool next_dependency() {
+    bool next() {
         // If we ran out of accesses, stop iterating.
         if (!right_access) {
             return false;

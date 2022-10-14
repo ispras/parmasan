@@ -37,7 +37,7 @@ class RaceSearchEngine {
   private:
     template <typename RequiredDependencyGenerator>
     void check_access_ordering(File* file, RequiredDependencyGenerator& dependencies_to_check) {
-        while (dependencies_to_check.find_next_dependency()) {
+        while (dependencies_to_check.next()) {
 
             // Ignore all the races with inode_unlink operation, as this operation
             // is intended to mark different unrelated generations of inode entries.
