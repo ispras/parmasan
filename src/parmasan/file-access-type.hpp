@@ -1,7 +1,7 @@
 #pragma once
 
 namespace PS {
-enum class FileAccessType { read, write, read_write, unlink, inode_release };
+enum class FileAccessType { read, write, read_write, unlink, inode_unlink };
 }
 
 template <class Stream> Stream& operator<<(Stream& stream, PS::FileAccessType type) {
@@ -20,8 +20,8 @@ template <class Stream> Stream& operator<<(Stream& stream, PS::FileAccessType ty
     case PS::FileAccessType::unlink:
         stream << "unlink";
         break;
-    case PS::FileAccessType::inode_release:
-        stream << "inode release";
+    case PS::FileAccessType::inode_unlink:
+        stream << "complete inode unlink";
         break;
     }
 

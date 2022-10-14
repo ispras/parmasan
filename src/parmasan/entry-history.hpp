@@ -1,19 +1,16 @@
 #pragma once
 
+#include "access-record.hpp"
 #include "file-access-type.hpp"
-#include "file.hpp"
 #include "target.hpp"
 #include <vector>
 
 namespace PS {
 
-struct EntryAccessRecord {
-    FileAccessType access_type{};
-    Target* target{};
-};
+class File;
 
 struct EntryData {
-    std::vector<EntryAccessRecord> accesses{};
+    std::vector<AccessRecord> accesses{};
     File* last_known_file;
 };
 

@@ -13,7 +13,7 @@ bool PS::TracerConnectionData::handle_packet(const char* buffer, size_t length) 
     case TRACER_EVENT_WRITE:
     case TRACER_EVENT_READ_WRITE:
     case TRACER_EVENT_UNLINK:
-    case TRACER_EVENT_INODE_RELEASE:
+    case TRACER_EVENT_INODE_UNLINK:
         return m_tracer_event_handler.read_file_event(event_type, reader);
     case TRACER_EVENT_CHILD:
         if (m_tracer_event_handler.read_child_event(reader)) {

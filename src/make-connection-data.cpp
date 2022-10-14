@@ -49,7 +49,11 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
         return;
     }
 
-    EntryAccessRecord record{.access_type = get_file_operation(event_type), .target = target};
+    AccessRecord record{.access_type = get_file_operation(event_type), .target = target};
 
     entry_data->accesses.push_back(record);
+
+    // After update_file call, last_known_file field stores the reference to the
+    // file at file_path.
+    entry_data->last_known_file->m_accesses.push_back(record);
 }

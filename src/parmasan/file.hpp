@@ -1,5 +1,7 @@
 #pragma once
 
+#include "access-record.hpp"
+#include "entry-history.hpp"
 #include "entry.hpp"
 #include "file-access-type.hpp"
 #include "target.hpp"
@@ -19,6 +21,7 @@ class File {
     std::unordered_map<std::string, std::unique_ptr<File>> m_children{};
     Entry m_entry{};
     File* m_parent = nullptr;
+    std::vector<AccessRecord> m_accesses{};
 
     File(File&& move) = delete;
     File(const File& copy) = delete;

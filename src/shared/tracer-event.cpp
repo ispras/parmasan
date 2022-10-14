@@ -13,8 +13,8 @@ FileAccessType get_file_operation(TracerEventType event) {
         return FileAccessType::read_write;
     case TRACER_EVENT_UNLINK:
         return FileAccessType::unlink;
-    case TRACER_EVENT_INODE_RELEASE:
-        return FileAccessType::inode_release;
+    case TRACER_EVENT_INODE_UNLINK:
+        return FileAccessType::inode_unlink;
     default:
         assert(!"Invalid tracer event");
         std::abort();
