@@ -57,7 +57,7 @@ class Tracer {
     void handle_renameat2_syscall(Tracee* process, int olddirfd, const char* oldpath, int newdirfd,
                                   const char* newpath, int flags);
 
-    void handle_mkdir_at_path(Tracee* process, const std::string& path);
+    void handle_mkdir_at_path(Tracee* process, const std::filesystem::path& path);
     void handle_mkdir_syscall(Tracee* process, const char* pathname, mode_t /*mode*/);
     void handle_mkdirat_syscall(Tracee* process, int dirfd, const char* pathname, mode_t mode);
     void handle_rmdir_syscall(Tracee* process, const char* pathname);
@@ -67,7 +67,7 @@ class Tracer {
 
     /* MARK: Socket methods */
     bool connect_to_socket();
-    void report_file_op(PS::TracerEventType event, pid_t pid, const std::string& path,
+    void report_file_op(PS::TracerEventType event, pid_t pid, const std::filesystem::path& path,
                         struct stat* stat);
     void report_child(pid_t parent, pid_t child);
     void report_done();
@@ -77,7 +77,7 @@ class Tracer {
 
     Tracee* get_process(pid_t pid);
     Tracee* wait_for_process();
-    void unlink_path(Tracee* process, const std::string& path);
+    void unlink_path(Tracee* process, const std::filesystem::path& path);
 
     /* MARK: Private fields */
 

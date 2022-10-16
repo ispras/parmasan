@@ -30,9 +30,9 @@ void Tracer::trace(char* argv[]) {
     }
 }
 
-void Tracer::report_file_op(PS::TracerEventType type, pid_t pid, const std::string& path,
+void Tracer::report_file_op(PS::TracerEventType type, pid_t pid, const std::filesystem::path& path,
                             struct stat* stat) {
-    std::string normalized_path = std::filesystem::path(path).lexically_normal();
+    std::string normalized_path = path.lexically_normal();
     PS::TracerFileEvent event = {.pid = pid,
                                  .file_entry = {.device = stat->st_dev, .inode = stat->st_ino}};
     m_output_buffer.clear();
@@ -202,7 +202,7 @@ void Tracer::report_read_write_for_flags(Tracee* process, int fd, unsigned long 
     int pid = process->get_pid();
     struct stat file_stat {};
     process->get_stat_for_fd(fd, &file_stat);
-    std::string path = process->get_path_for_fd(fd);
+    std::filesystem::path path = process->get_path_for_fd(fd);
 
     flags &= O_ACCMODE;
 
@@ -221,7 +221,7 @@ void Tracer::report_read_write_for_flags(Tracee* process, int fd, unsigned long 
     report_file_op(event, pid, path, &file_stat);
 }
 
-void Tracer::unlink_path(Tracee* process, const std::string& path) {
+void Tracer::unlink_path(Tracee* process, const std::filesystem::path& path) {
     struct stat file_stat {};
 
     // Using lstat here as unlink does not resolve symlinks
@@ -282,7 +282,7 @@ void Tracer::handle_creat_syscall(Tracee* process, const char* /*pathname*/, mod
     report_read_write_for_flags(process, fd, O_WRONLY | O_CREAT | O_TRUNC);
 }
 
-void Tracer::handle_mkdir_at_path(Tracee* process, const std::string& path) {
+void Tracer::handle_mkdir_at_path(Tracee* process, const std::filesystem::path& path) {
     // Wait until process is out from syscall to call stat
     // on newly created directory.
 
