@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 set(CMAKE_CXX_STANDARD 20)
 
-file(GLOB_RECURSE files "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/src/*.hpp")
+file(GLOB_RECURSE files "${CMAKE_SOURCE_DIR}/*.cpp" "${CMAKE_SOURCE_DIR}/*.hpp")
 add_executable(tracer ${files})
 
-target_include_directories(tracer PUBLIC src)
+target_include_directories(tracer PUBLIC .)
