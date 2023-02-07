@@ -6,6 +6,5 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g3 -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_CXX_STANDARD 17)
 
-file(GLOB_RECURSE files "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/src/*.hpp")
-add_executable(parmasan ${files})
-target_include_directories(parmasan PUBLIC src)
+add_subdirectory(tracer)
+add_subdirectory(daemon)
