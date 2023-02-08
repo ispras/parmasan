@@ -5,3 +5,19 @@ PointerAlignment : Left
 ColumnLimit : 100
 BreakBeforeBraces : Linux
 AllowShortFunctionsOnASingleLine : None
+
+SortIncludes: CaseSensitive
+IncludeBlocks: Merge
+# Order by specificity: Standard library (C, then C++), POSIX, Linux, local.
+# The lower the Priority, the higher up the include category goes.
+IncludeCategories:
+    - Regex:           '^<(assert|complex|ctype|errno|fenv|float|inttypes|iso646|limits|locale|math|setjmp|signal|stdarg|stdbool|stddef|stdint|stdio|stdlib|string|tgmath|time|wchar|wctype)[.]h>$'
+      Priority:        10
+    - Regex:           '^<(algorithm|any|array|atomic|barrier|bit|bitset|cassert|cctype|cerrno|cfenv|cfloat|charconv|chrono|cinttypes|climits|clocale|cmath|codecvt|compare|complex|concepts|condition_variable|coroutine|csetjmp|csignal|cstdarg|cstddef|cstdint|cstdio|cstdlib|cstring|ctime|cuchar|cwchar|cwctype|deque|exception|execution|expected|filesystem|flat_map|flat_set|format|forward_list|fstream|functional|future|generator|initializer_list|iomanip|ios|iosfwd|iostream|istream|iterator|latch|limits|list|locale|map|mdspan|memory|memory_resource|mutex|new|numbers|numeric|optional|ostream|print|queue|random|ranges|ratio|regex|scoped_allocator|semaphore|set|shared_mutex|source_location|span|spanstream|sstream|stack|stacktrace|stdexcept|stdfloat|stop_token|streambuf|string|string_view|strstream|syncstream|system_error|thread|tuple|typeindex|typeinfo|type_traits|unordered_map|unordered_set|utility|valarray|variant|vector|version)>$'
+      Priority:        20
+    - Regex:           '^<(aio|arpa/inet|assert|complex|cpio|ctype|dirent|dlfcn|errno|fcntl|fenv|float|fmtmsg|fnmatch|ftw|glob|grp|iconv|inttypes|iso646|langinfo|libgen|limits|locale|math|monetary|mqueue|ndbm|net/if|netdb|netinet/in|netinet/tcp|nl_types|poll|pthread|pwd|regex|sched|search|semaphore|setjmp|signal|spawn|stdarg|stdbool|stddef|stdint|stdio|stdlib|string|strings|stropts|sys/ipc|sys/mman|sys/msg|sys/resource|sys/select|sys/sem|sys/shm|sys/socket|sys/stat|sys/statvfs|sys/time|sys/times|sys/types|sys/uio|sys/un|sys/utsname|sys/wait|syslog|tar|termios|tgmath|time|trace|ulimit|unistd|utime|utmpx|wchar|wctype|wordexp)[.]h>$'
+      Priority:        30
+    - Regex:           '<'
+      Priority:        40
+    - Regex:           '"'
+      Priority:        50
