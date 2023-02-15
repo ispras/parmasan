@@ -8,3 +8,5 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(tracer)
 add_subdirectory(daemon)
+
+install(TARGETS tracer parmasan)
