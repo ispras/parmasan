@@ -1,12 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
 project(tracer)
-
-set(CMAKE_C_FLAGS "-Wall -Wextra")
-set(CMAKE_C_FLAGS_DEBUG "-g3 -fsanitize=address")
-set(CMAKE_C_FLAGS_RELEASE "-O2")
-set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address")
-
-set(CMAKE_C_STANDARD 11)
 
 add_executable(tracer
         main.cpp
