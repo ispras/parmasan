@@ -1,7 +1,8 @@
 
+#include <fstream>
+#include <unistd.h>
 #include "parmasan-daemon.hpp"
 #include "utils/run-shell.hpp"
-#include <unistd.h>
 
 int main(int argc, char** argv)
 {
@@ -11,7 +12,24 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    std::ofstream dump_output_stream("parmasan-dump.txt");
+    const char* output_fname = "parmasan-dump.txt";
+    std::ios_base::openmode mode = std::ofstream::out;
+    int opt;
+    while ((opt = getopt(argc, argv, "+ao:")) != -1) {
+        switch (opt) {
+        case 'a':
+            mode |= std::ofstream::app;
+            break;
+        case 'o':
+            output_fname = optarg;
+            break;
+        case '?': default:
+            std::cerr << "Usage: " << argv[0] <<
+                    " [-o OUTPUT] [-a] [-- COMMAND [ARGS...]]\n";
+            return EXIT_FAILURE;
+        }
+    }
+    std::ofstream dump_output_stream(output_fname, mode);
 
     PS::ParmasanDaemon daemon(dump_output_stream);
 
@@ -36,7 +54,7 @@ int main(int argc, char** argv)
 
     if(fork() == 0) {
         PS::ParmasanDaemon::reset_signal_blocking();
-        run_shell(argc - 1, argv + 1);
+        run_shell(argc - optind, argv + optind);
     }
 
     if(daemon.loop()) {
