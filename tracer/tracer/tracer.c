@@ -403,7 +403,7 @@ static void tracer_handle_rmdir_syscall(s_tracer* self, s_tracee* process, const
         length++;
     }
 
-    strncpy(path + length, pathname, PATH_MAX + 1 - length);
+    tracee_read_string(process, pathname, path + length, PATH_MAX + 1 - length);
 
     char normalized_path[PATH_MAX + 1];
     realpath(path, normalized_path);
