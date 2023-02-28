@@ -117,10 +117,10 @@ void tracee_get_stat_for_fd(s_tracee* self, int fd, struct stat* file_stat)
 
 int tracee_get_path_for_fd(s_tracee* self, int fd, char* path, size_t path_size)
 {
-    char cwd_path[128] = {0};
-    sprintf(cwd_path, "/proc/%d/fd/%d", self->pid, fd);
+    char fd_path[128] = {0};
+    sprintf(fd_path, "/proc/%d/fd/%d", self->pid, fd);
 
-    ssize_t size = readlink(cwd_path, path, path_size - 1);
+    ssize_t size = readlink(fd_path, path, path_size - 1);
     if (size < 0) {
         return -1;
     }
