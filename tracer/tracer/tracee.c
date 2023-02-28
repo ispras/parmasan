@@ -122,6 +122,7 @@ int tracee_get_path_for_fd(s_tracee* self, int fd, char* path, size_t path_size)
 
     ssize_t size = readlink(fd_path, path, path_size - 1);
     if (size < 0) {
+        perror("readlink /proc/PID/fd/FD");
         return -1;
     }
 
@@ -137,6 +138,7 @@ ssize_t tracee_get_cwd(s_tracee* self, char* path, size_t path_size)
 
     ssize_t size = readlink(cwd_path, path, path_size - 1);
     if (size < 0) {
+        perror("readlink /proc/PID/cwd");
         return -1;
     }
 

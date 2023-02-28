@@ -290,6 +290,9 @@ static void tracer_handle_unlinkat_syscall(s_tracer* self, s_tracee* process, in
         path_length = tracee_get_path_for_fd(process, dirfd, path, PATH_MAX + 1);
     }
 
+    if (path_length < 0)
+        return;
+
     if (path[path_length - 1] != '/') {
         path[path_length] = '/';
         path_length++;
@@ -362,6 +365,9 @@ static void tracer_handle_mkdirat_syscall(s_tracer* self, s_tracee* process, int
     } else {
         path_length = tracee_get_path_for_fd(process, dirfd, path, PATH_MAX + 1);
     }
+
+    if (path_length < 0)
+        return;
 
     if (path[path_length - 1] != '/') {
         path[path_length] = '/';
