@@ -282,7 +282,7 @@ static void tracer_handle_unlinkat_syscall(s_tracer* self, s_tracee* process, in
 {
     char path[PATH_MAX + 1];
 
-    int path_length = -1;
+    ssize_t path_length = -1;
 
     if (dirfd == AT_FDCWD) {
         path_length = tracee_get_cwd(process, path, PATH_MAX + 1);
@@ -358,7 +358,7 @@ static void tracer_handle_mkdirat_syscall(s_tracer* self, s_tracee* process, int
 {
     char path[PATH_MAX + 1];
 
-    int path_length = -1;
+    ssize_t path_length = -1;
 
     if (dirfd == AT_FDCWD) {
         path_length = tracee_get_cwd(process, path, PATH_MAX + 1);
