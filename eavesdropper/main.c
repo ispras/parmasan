@@ -34,6 +34,10 @@ int check_read_fd(const fd_set* mask, int readfd, int writefd, char buf[MAX_MESS
 
 int main(int argc, const char** argv)
 {
+    // Set stdout buffer to NULL to avoid buffering. This is needed to make sure
+    // that the output is printed even if tracer or demon hangs.
+    setbuf(stdout, NULL);
+
     int daemon_fd = atoi(getenv("PARMASAN_DAEMON_FD"));
     int socketpair_fds[2];
     socketpair(AF_UNIX, SOCK_SEQPACKET, 0, socketpair_fds);
