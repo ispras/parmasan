@@ -12,17 +12,13 @@ void __attribute__((__noreturn__)) run_shell(int argc, char* argv[])
         _Exit(EXIT_FAILURE);
     }
 
-    // Duplicate the argv array to add "-" as the first argument
-
-    char argv0[] = "-";
-
     const char* shell = getenv("SHELL");
 
     if (!shell) {
         shell = "/bin/sh";
     }
 
-    execl(shell, argv0, nullptr);
+    execl(shell, shell, nullptr);
 
     perror(shell);
     _Exit(EXIT_FAILURE);
