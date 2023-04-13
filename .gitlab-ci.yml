@@ -1,0 +1,8 @@
+
+trigger_job:
+  variables:
+    SUBPROJECT_NAME: $CI_PROJECT_NAME
+    SUBPROJECT_BRANCH: $CI_COMMIT_BRANCH
+  trigger:
+    project: build-race-condition-detection/manifest
+    branch: main
