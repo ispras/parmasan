@@ -3,7 +3,8 @@
 #include "utils/path-walker.hpp"
 
 PS::EntryData* PS::FilenameDatabase::update_file(const std::string& pathname,
-                                                 const PS::Entry& entry) {
+                                                 const PS::Entry& entry)
+{
     PathWalker path_parser(pathname);
 
     File* file = get_root();

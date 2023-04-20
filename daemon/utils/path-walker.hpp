@@ -3,11 +3,14 @@
 #include <optional>
 #include <string>
 
-class PathWalker {
+class PathWalker
+{
   public:
-    explicit PathWalker(const std::string& path) : m_path(path) {}
+    explicit PathWalker(const std::string& path)
+        : m_path(path) {}
 
-    std::optional<std::string_view> next_component() {
+    std::optional<std::string_view> next_component()
+    {
         m_index = m_path.find_first_not_of('/', m_index);
         if (m_index == std::string::npos) {
             return std::nullopt;

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "parmasan/entry.hpp"
-#include "parmasan/file-access-type.hpp"
 #include <cassert>
 #include <cstring>
 #include <ios>
 #include <string>
+#include "parmasan/entry.hpp"
+#include "parmasan/file-access-type.hpp"
 
-namespace PS {
+namespace PS
+{
 
 enum GeneralEventType : char {
     GENERAL_EVENT_INIT = 'I',

@@ -7,7 +7,8 @@
 #include "file.hpp"
 #include "shared/structures.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class MakeConnectionData;
 
@@ -17,7 +18,8 @@ struct PIDData {
 };
 
 class RaceSearchEngine;
-class TracerEventHandler {
+class TracerEventHandler
+{
   public:
     explicit TracerEventHandler() = default;
 

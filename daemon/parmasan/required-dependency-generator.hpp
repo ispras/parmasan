@@ -4,7 +4,8 @@
 #include "access-iterator.hpp"
 #include "access-record.hpp"
 
-namespace PS {
+namespace PS
+{
 
 // Critical access by definition must be performed strictly after all previous and before
 // all subsequent accesses in the list. If an access may occur at any time between two
@@ -35,12 +36,14 @@ struct RequiredDependencyGenerator {
     bool is_right_critical = false;
 
     explicit RequiredDependencyGenerator(const std::vector<AccessRecord>& records)
-        : left_access(records), right_access(records) {
+        : left_access(records), right_access(records)
+    {
         update_is_left_critical();
         update_is_right_critical();
     }
 
-    bool next() {
+    bool next()
+    {
         // If we ran out of accesses, stop iterating.
         if (!right_access) {
             return false;
@@ -97,21 +100,25 @@ struct RequiredDependencyGenerator {
         return static_cast<bool>(right_access);
     }
 
-    void left_next() {
+    void left_next()
+    {
         left_access++;
         update_is_left_critical();
     }
 
-    void update_is_left_critical() {
+    void update_is_left_critical()
+    {
         is_left_critical = left_access && CriticalAccessPredicate()(*left_access);
     }
 
-    void right_next() {
+    void right_next()
+    {
         right_access++;
         update_is_right_critical();
     }
 
-    void update_is_right_critical() {
+    void update_is_right_critical()
+    {
         is_right_critical = right_access && CriticalAccessPredicate()(*right_access);
     }
 };

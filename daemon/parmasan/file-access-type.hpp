@@ -1,10 +1,19 @@
 #pragma once
 
-namespace PS {
-enum class FileAccessType { read, write, read_write, unlink, inode_unlink };
+namespace PS
+{
+enum class FileAccessType {
+    read,
+    write,
+    read_write,
+    unlink,
+    inode_unlink,
+};
 }
 
-template <class Stream> Stream& operator<<(Stream& stream, PS::FileAccessType type) {
+template <class Stream>
+Stream& operator<<(Stream& stream, PS::FileAccessType type)
+{
 
     switch (type) {
 

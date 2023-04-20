@@ -1,10 +1,10 @@
 
+#include "tracee.h"
 #include <assert.h>
 #include <dirent.h>
-#include <unistd.h>
 #include <sys/uio.h>
+#include <unistd.h>
 #include <linux/elf.h>
-#include "tracee.h"
 
 void tracee_exit_from_syscall(s_tracee* self)
 {
@@ -171,7 +171,7 @@ int tracee_read_string(s_tracee* self, const char* process_addr, char* buffer, s
 
     while (true) {
         uint64_t process_word = 0;
-        if(tracee_read_word(self, block_addr, &process_word) < 0) {
+        if (tracee_read_word(self, block_addr, &process_word) < 0) {
             // Early-termination due to an error
             // Zero-terminate the buffer and return the number of characters read so far
             if (buffer_size > characters_read) {

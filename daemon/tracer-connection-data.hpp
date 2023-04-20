@@ -8,7 +8,8 @@ namespace PS
 class TracerConnectionData : public DaemonConnectionData
 {
   public:
-    explicit TracerConnectionData(int m_fd) : DaemonConnectionData(m_fd)
+    explicit TracerConnectionData(int m_fd)
+        : DaemonConnectionData(m_fd)
     {
     }
 

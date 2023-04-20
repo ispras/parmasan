@@ -6,18 +6,26 @@
 #include "entry.hpp"
 #include "file.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class RaceSearchEngine;
-class FilenameDatabase {
+class FilenameDatabase
+{
   public:
     explicit FilenameDatabase() = default;
 
-    File* get_root() { return m_root.get(); }
+    File* get_root()
+    {
+        return m_root.get();
+    }
 
     EntryData* update_file(const std::string& pathname, const Entry& entry);
 
-    std::unordered_map<Entry, std::unique_ptr<EntryData>>& get_entries() { return m_entries; };
+    std::unordered_map<Entry, std::unique_ptr<EntryData>>& get_entries()
+    {
+        return m_entries;
+    };
 
   private:
     std::unique_ptr<File> m_root = std::make_unique<File>("/");

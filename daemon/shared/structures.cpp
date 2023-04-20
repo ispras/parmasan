@@ -1,9 +1,11 @@
 
 #include "structures.hpp"
 
-namespace PS {
+namespace PS
+{
 
-FileAccessType get_file_operation(TracerEventType event) {
+FileAccessType get_file_operation(TracerEventType event)
+{
     switch (event) {
     case TRACER_EVENT_READ:
         return FileAccessType::read;

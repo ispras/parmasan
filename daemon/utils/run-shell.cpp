@@ -1,8 +1,8 @@
 
+#include "run-shell.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
-#include "run-shell.hpp"
 
 void __attribute__((__noreturn__)) run_shell(int argc, char* argv[])
 {

@@ -11,14 +11,17 @@
 #include "parmasan/race-search-engine.hpp"
 #include "parmasan/tracer-event-handler.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class TracerConnectionData;
 
-class ParmasanDaemon : public DaemonBase {
+class ParmasanDaemon : public DaemonBase
+{
 
   public:
-    explicit ParmasanDaemon(std::ostream& dump_output_stream): m_dump_output(dump_output_stream) {};
+    explicit ParmasanDaemon(std::ostream& dump_output_stream)
+        : m_dump_output(dump_output_stream){};
     ParmasanDaemon(const ParmasanDaemon& copy) = delete;
     ParmasanDaemon(ParmasanDaemon&& move) = delete;
     ParmasanDaemon& operator=(const ParmasanDaemon& copy_assign) = delete;

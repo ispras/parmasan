@@ -6,5 +6,5 @@ const char* TRACER_EVENT_CODES[] = {
     "UNLINK      ",
     "INODE_UNLINK",
     "CHILD       ",
-    "FINISH      "
+    "FINISH      ",
 };

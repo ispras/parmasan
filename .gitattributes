@@ -1,0 +1,9 @@
+*.[ch](pp)? whitespace=trailing-space
+*.sh whitespace=trailing-space
+Makefile whitespace=trailing-space
+CMakeLists.txt whitespace=trailing-space
+*.yml whitespace=trailing-space
+.gitignore whitespace=trailing-space
+.gitattributes whitespace=trailing-space
+.editorconfig whitespace=trailing-space
+.clang-format whitespace=trailing-space

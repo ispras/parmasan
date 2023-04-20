@@ -5,7 +5,8 @@
 #include "file-access-type.hpp"
 #include "target.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class File;
 

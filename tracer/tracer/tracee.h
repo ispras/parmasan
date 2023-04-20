@@ -6,10 +6,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ptrace.h>
 #include <sys/stat.h>
-#include <sys/user.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
+#include <sys/user.h>
 // #include <linux/openat2.h>
 #include "openat2.h"
 

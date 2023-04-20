@@ -9,17 +9,21 @@ enum class DaemonAction {
     ACKNOWLEDGE
 };
 
-class DaemonBase {
+class DaemonBase
+{
   public:
-
     DaemonBase(const DaemonBase& copy) = delete;
     DaemonBase(DaemonBase&& move) = delete;
-    explicit DaemonBase(int buffer_size = 1024) { m_buffer.resize(buffer_size); }
+    explicit DaemonBase(int buffer_size = 1024)
+    {
+        m_buffer.resize(buffer_size);
+    }
     ~DaemonBase();
 
     // MARK: handlers
 
-    virtual DaemonAction handle_message() {
+    virtual DaemonAction handle_message()
+    {
         return DaemonAction::DISCONNECT;
     }
 

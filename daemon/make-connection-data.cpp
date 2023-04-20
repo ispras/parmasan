@@ -1,7 +1,8 @@
 
 #include "make-connection-data.hpp"
 
-DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer) {
+DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
+{
 
     // Get the first character of the buffer, which is the event type.
     auto event_type = static_cast<MakeEventType>(buffer[0]);
@@ -9,11 +10,12 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer) {
     // Read the entire word from the buffer, but ignore it
     // because we already know what the event type is.
 
-    while(*buffer != ' ' && *buffer != '\0') buffer++;
+    while (*buffer != ' ' && *buffer != '\0')
+        buffer++;
 
     switch (event_type) {
     case MAKE_EVENT_DEPENDENCY:
-        if(!m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
+        if (!m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
             return DaemonAction::DISCONNECT;
         }
         return DaemonAction::CONTINUE;
@@ -32,7 +34,9 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer) {
     }
 }
 void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
-                                               TracerFileEvent* event, const std::string& file_path) {
+                                               TracerFileEvent* event,
+                                               const std::string& file_path)
+{
     EntryData* entry_data =
         m_race_search_engine.m_filename_database.update_file(file_path, event->file_entry);
 

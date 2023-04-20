@@ -6,3 +6,7 @@ trigger_job:
   trigger:
     project: build-race-condition-detection/manifest
     branch: main
+
+check_formatting:
+  script:
+    - ./check-format.sh

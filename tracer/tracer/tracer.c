@@ -1,18 +1,18 @@
 
+#include "tracer.h"
 #include <assert.h>
-#include <fcntl.h>
 #include <limits.h>
-#include <unistd.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <sys/ptrace.h>
-#include <sys/syscall.h>
-#include <sys/user.h>
+#include <fcntl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
-#include "tracer.h"
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/user.h>
 #include "renameat2.h"
 #include "tracee.h"
 
@@ -135,8 +135,8 @@ void tracer_parent_task(s_tracer* self)
 }
 
 enum {
-    TRACER_GENERAL_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                                  PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC
+    TRACER_GENERAL_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK |
+                                  PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC
 };
 
 void tracer_bpf_loop(s_tracer* self)
@@ -425,8 +425,8 @@ static void tracer_handle_renameat_syscall(s_tracer* self, s_tracee* process, in
 }
 
 static void tracer_handle_renameat2_syscall(s_tracer* self, s_tracee* process, int olddirfd,
-                                            const char* oldpath, int newdirfd, const char* newpath,
-                                            int flags)
+                                            const char* oldpath, int newdirfd,
+                                            const char* newpath, int flags)
 {
     if (flags & RENAME_NOREPLACE || flags & RENAME_EXCHANGE)
         return;
@@ -458,8 +458,8 @@ void tracer_handle_syscall(s_tracer* self, s_tracee* process)
         tracer_handle_openat_syscall(self, process, (int)arg0, (char*)arg1, (int)arg2, arg3);
         break;
     case SYS_openat2:
-        tracer_handle_openat2_syscall(self, process, (int)arg0, (char*)arg1, (struct open_how*)arg2,
-                                      arg3);
+        tracer_handle_openat2_syscall(self, process, (int)arg0, (char*)arg1,
+                                      (struct open_how*)arg2, arg3);
         break;
     case SYS_creat:
         tracer_handle_creat_syscall(self, process, (const char*)arg0, state.rsi);

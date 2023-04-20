@@ -2,8 +2,8 @@
 
 #include <fstream>
 #include <memory>
-#include <unordered_map>
 #include <ostream>
+#include <unordered_map>
 #include "access-record.hpp"
 #include "entry.hpp"
 #include "file.hpp"
@@ -12,9 +12,11 @@
 #include "target-database.hpp"
 #include "tracer-event-handler.hpp"
 
-namespace PS {
+namespace PS
+{
 
-class RaceSearchEngine {
+class RaceSearchEngine
+{
   public:
     TargetDatabase m_target_database{};
     FilenameDatabase m_filename_database{};
@@ -24,7 +26,8 @@ class RaceSearchEngine {
     RaceSearchEngine& operator=(RaceSearchEngine&& move_assign) = delete;
     RaceSearchEngine& operator=(const RaceSearchEngine& copy_assign) = delete;
 
-    explicit RaceSearchEngine(std::ostream& out_stream) : m_out_stream(out_stream) {}
+    explicit RaceSearchEngine(std::ostream& out_stream)
+        : m_out_stream(out_stream) {}
 
     bool search_for_dependency(Target* from, Target* to);
     void search_for_races();
@@ -39,7 +42,8 @@ class RaceSearchEngine {
     std::ostream& m_out_stream;
 
     template <typename RequiredDependencyGenerator>
-    void check_access_ordering(File* file, RequiredDependencyGenerator& dependencies_to_check) {
+    void check_access_ordering(File* file, RequiredDependencyGenerator& dependencies_to_check)
+    {
         while (dependencies_to_check.next()) {
 
             // Ignore all the races with inode_unlink operation, as this operation

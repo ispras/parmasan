@@ -11,11 +11,13 @@
 #include "file-access-type.hpp"
 #include "target.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class File;
 
-class File {
+class File
+{
   public:
     std::string m_name;
     std::unordered_map<std::string, std::unique_ptr<File>> m_children{};
@@ -28,12 +30,16 @@ class File {
     File& operator=(File&& move_assign) = delete;
     File& operator=(const File& copy_assign) = delete;
 
-    template <typename T> explicit File(T&& name) : m_name(std::forward<T>(name)) {
+    template <typename T>
+    explicit File(T&& name)
+        : m_name(std::forward<T>(name))
+    {
         if (!m_name.empty() && m_name.back() == '/') {
             m_name.pop_back();
         }
     }
-    explicit File(const char* name) : File(std::string(name)) {}
+    explicit File(const char* name)
+        : File(std::string(name)) {}
 
     File* get_child(const std::string& child_name);
 

@@ -4,7 +4,8 @@
 #include "parmasan-daemon.hpp"
 #include "race-search-engine.hpp"
 
-PS::MakeConnectionData* PS::TracerEventHandler::get_make_process_for_pid(pid_t pid) {
+PS::MakeConnectionData* PS::TracerEventHandler::get_make_process_for_pid(pid_t pid)
+{
     while (pid > 0) {
         auto pid_data = m_pid_database[pid];
         if (pid_data.make_process) {
@@ -14,12 +15,13 @@ PS::MakeConnectionData* PS::TracerEventHandler::get_make_process_for_pid(pid_t p
     }
     return nullptr;
 }
-bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* buffer) {
+bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* buffer)
+{
 
     // Read length of the path
     size_t length = 0;
     int res = 0;
-    if(sscanf(buffer, "%zu %n", &length, &res) <= 0) {
+    if (sscanf(buffer, "%zu %n", &length, &res) <= 0) {
         return false;
     }
     buffer += res;
@@ -28,9 +30,10 @@ bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* b
     std::string file_path(buffer, length);
     buffer += length;
 
-    TracerFileEvent event {};
+    TracerFileEvent event{};
 
-    if(sscanf(buffer, "%d %lu %lu %n", &event.pid, &event.file_entry.device, &event.file_entry.inode, &res) <= 0) {
+    if (sscanf(buffer, "%d %lu %lu %n", &event.pid, &event.file_entry.device,
+               &event.file_entry.inode, &res) <= 0) {
         return false;
     }
 
@@ -45,10 +48,11 @@ bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* b
     return true;
 }
 
-bool PS::TracerEventHandler::read_child_event(const char* buffer) {
+bool PS::TracerEventHandler::read_child_event(const char* buffer)
+{
     TracerChildEvent event{};
 
-    if(sscanf(buffer, "%d %d", &event.pid, &event.ppid) < 0) {
+    if (sscanf(buffer, "%d %d", &event.pid, &event.ppid) < 0) {
         return false;
     }
 
@@ -56,10 +60,12 @@ bool PS::TracerEventHandler::read_child_event(const char* buffer) {
 
     return true;
 }
-void PS::TracerEventHandler::register_child(pid_t ppid, pid_t pid) {
+void PS::TracerEventHandler::register_child(pid_t ppid, pid_t pid)
+{
     auto& pid_data = m_pid_database[pid];
     pid_data.ppid = ppid;
 }
-void PS::TracerEventHandler::assign_make_process(pid_t pid, PS::MakeConnectionData* make_process) {
+void PS::TracerEventHandler::assign_make_process(pid_t pid, PS::MakeConnectionData* make_process)
+{
     m_pid_database[pid].make_process = make_process;
 }

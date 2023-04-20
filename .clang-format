@@ -2,9 +2,9 @@ BasedOnStyle : LLVM
 IndentWidth : 4
 DerivePointerAlignment : false
 PointerAlignment : Left
-ColumnLimit : 100
+ColumnLimit : 0
 BreakBeforeBraces : Linux
-AllowShortFunctionsOnASingleLine : None
+AllowShortFunctionsOnASingleLine : Empty
 
 SortIncludes: CaseSensitive
 IncludeBlocks: Merge

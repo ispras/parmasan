@@ -104,12 +104,12 @@ void RaceSearchEngine::report_race(const File* file, const AccessRecord& access_
     m_out_stream << "race found at file '" << file->get_path() << "': ";
     m_out_stream << access_a.access_type << " at target '" << access_a.target->name << "', ";
     m_out_stream << access_b.access_type << " at target '" << access_b.target->name
-                  << "' are unordered\n";
+                 << "' are unordered\n";
 }
 void RaceSearchEngine::dump(EntryData* entry)
 {
     m_out_stream << "Dumping m_accesses to entry '" << entry->last_known_file->get_path()
-                  << "':\n";
+                 << "':\n";
 
     for (auto& access : entry->accesses) {
         m_out_stream << " - " << access.access_type << " from " << access.target->name << "\n";

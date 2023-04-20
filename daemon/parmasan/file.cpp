@@ -1,13 +1,15 @@
 
 #include "file.hpp"
 
-std::string PS::File::get_path() const {
+std::string PS::File::get_path() const
+{
     std::stringstream stream;
     walk_path(stream);
     return stream.str();
 }
 
-void PS::File::walk_path(std::stringstream& stream) const {
+void PS::File::walk_path(std::stringstream& stream) const
+{
     if (m_parent) {
         m_parent->walk_path(stream);
         stream << '/' << m_name;
@@ -15,7 +17,8 @@ void PS::File::walk_path(std::stringstream& stream) const {
         stream << m_name;
     }
 }
-PS::File* PS::File::get_child(const std::string& child_name) {
+PS::File* PS::File::get_child(const std::string& child_name)
+{
     auto it = m_children.find(child_name);
     if (it == m_children.end()) {
 

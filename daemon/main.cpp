@@ -23,9 +23,9 @@ int main(int argc, char** argv)
         case 'o':
             output_fname = optarg;
             break;
-        case '?': default:
-            std::cerr << "Usage: " << argv[0] <<
-                    " [-o OUTPUT] [-a] [-- COMMAND [ARGS...]]\n";
+        case '?':
+        default:
+            std::cerr << "Usage: " << argv[0] << " [-o OUTPUT] [-a] [-- COMMAND [ARGS...]]\n";
             return EXIT_FAILURE;
         }
     }
@@ -52,12 +52,12 @@ int main(int argc, char** argv)
 
     std::cout << "Running daemon\n";
 
-    if(fork() == 0) {
+    if (fork() == 0) {
         PS::ParmasanDaemon::reset_signal_blocking();
         run_shell(argc - optind, argv + optind);
     }
 
-    if(daemon.loop()) {
+    if (daemon.loop()) {
         return EXIT_SUCCESS;
     }
 

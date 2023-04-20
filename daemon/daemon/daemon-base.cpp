@@ -4,11 +4,11 @@
 #include <cerrno>
 #include <csignal>
 #include <memory>
-#include <sys/fcntl.h>
-#include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <sys/fcntl.h>
+#include <sys/signalfd.h>
 
 int DaemonBase::setup()
 {

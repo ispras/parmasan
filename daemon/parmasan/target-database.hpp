@@ -5,10 +5,12 @@
 #include <vector>
 #include "file.hpp"
 
-namespace PS {
+namespace PS
+{
 
 class RaceSearchEngine;
-class TargetDatabase {
+class TargetDatabase
+{
   public:
     explicit TargetDatabase() = default;
 
