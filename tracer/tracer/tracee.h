@@ -54,10 +54,6 @@ void tracee_ptrace_continue_to_syscall(s_tracee* self);
 // Waits for this exact tracee to emit a signal.
 void tracee_wait(s_tracee* self);
 
-// Reads the stat structure of the file pointed by the FD file descriptor to the
-// FILE_STAT structure.
-void tracee_get_stat_for_fd(s_tracee* self, int fd, struct stat* file_stat);
-
 // Reads the path of the FD file descriptor into the PATH buffer. The PATH buffer
 // must be at least PATH_MAX bytes long. Returns length of string on success, -1 on failure.
 int tracee_get_path_for_fd(s_tracee* self, int fd, char* path, size_t path_size);

@@ -13,10 +13,12 @@
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 #include <sys/user.h>
+#include "path.h"
 #include "renameat2.h"
 #include "tracee.h"
 
-static char socket_buffer[PATH_MAX * 4] = {0};
+#define LONG_PATH_MAX (PATH_MAX * 4)
+static char socket_buffer[LONG_PATH_MAX] = {0};
 
 #define TRACER_MESSAGE_PREFIX "TRACER %7d "
 
@@ -227,20 +229,92 @@ void tracer_child_task(s_tracer* self, char* argv[])
     exit(-1);
 }
 
+static ssize_t tracee_get_path_for_dirfd(s_tracee* process, int dirfd, char path[PATH_MAX])
+{
+    ssize_t path_length = -1;
+
+    if (dirfd == AT_FDCWD) {
+        path_length = tracee_get_cwd(process, path, PATH_MAX + 1);
+    } else {
+        path_length = tracee_get_path_for_fd(process, dirfd, path, PATH_MAX + 1);
+    }
+
+    if (path_length < 0)
+        return -1;
+
+    if (path[path_length - 1] != '/') {
+        if (path_length == PATH_MAX)
+            return -1;
+
+        path[path_length] = '/';
+        path_length++;
+    }
+
+    path[path_length] = '\0';
+    return path_length;
+}
+
+static ssize_t tracee_get_normalized_path(s_tracee* process, int dirfd, const char* pathname,
+                                          char path[PATH_MAX])
+{
+    ssize_t path_length = tracee_get_path_for_dirfd(process, dirfd, path);
+    if (path_length < 0) {
+        return -1;
+    }
+
+    int length = tracee_read_string(process, pathname, path + path_length,
+                                    PATH_MAX + 1 - path_length);
+    path[length + path_length] = '\0';
+    return (ssize_t)normalize_path(path);
+}
+
+static ssize_t resolve_symlink(char* path, ssize_t path_length, ssize_t path_capacity)
+{
+    // The trick here is to write the link target to the end of the path, after a "/../"
+    // string, and call normalize_path() on the resulting string afterward.
+
+    char up_dir[4] = "/../";
+
+    ssize_t link_offset = path_length + (ssize_t)sizeof(up_dir);
+    ssize_t readlink_length = readlink(path, path + link_offset, path_capacity - 1 - link_offset);
+
+    if (readlink_length < 0)
+        return readlink_length;
+
+    // If the link target is absolute, we can just replace the path with it.
+    if (path[link_offset] == '/') {
+        memcpy(path, path + link_offset, readlink_length);
+        path[readlink_length] = '\0';
+        return readlink_length;
+    }
+
+    memcpy(path + path_length, up_dir, sizeof(up_dir));
+    path_length = link_offset + readlink_length;
+    path[path_length] = '\0';
+
+    return (ssize_t)normalize_path(path);
+}
+
 /* MARK: Syscall handlers */
 
 void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int fd,
-                                        unsigned long long flags)
+                                        unsigned long long flags, const char* pathname, int dirfd)
 {
     if (fd < 0)
         return;
+
+    char path[LONG_PATH_MAX];
+
+    ssize_t path_length = tracee_get_normalized_path(process, dirfd, pathname, path);
+
+    if (path_length < 0)
+        return;
+
     int pid = process->pid;
     struct stat file_stat = {0};
-    tracee_get_stat_for_fd(process, fd, &file_stat);
 
-    char path[PATH_MAX + 1];
-
-    tracee_get_path_for_fd(process, fd, path, PATH_MAX + 1);
+    if (lstat(path, &file_stat) < 0)
+        return;
 
     flags &= O_ACCMODE;
 
@@ -254,6 +328,19 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
         event = TRACER_EVENT_READ_WRITE;
     } else {
         return;
+    }
+
+    // If file is a symlink, iterate through symlinks until the actual file is found.
+    // For each symlink, report a read event.
+    while (S_ISLNK(file_stat.st_mode)) {
+        tracer_report_file_op(self, TRACER_EVENT_READ, pid, path, &file_stat);
+
+        path_length = resolve_symlink(path, path_length, sizeof(path));
+
+        if (lstat(path, &file_stat) < 0) {
+            perror("lstat");
+            return;
+        }
     }
 
     tracer_report_file_op(self, event, pid, path, &file_stat);
@@ -282,28 +369,10 @@ static void tracer_handle_unlinkat_syscall(s_tracer* self, s_tracee* process, in
 {
     char path[PATH_MAX + 1];
 
-    ssize_t path_length = -1;
-
-    if (dirfd == AT_FDCWD) {
-        path_length = tracee_get_cwd(process, path, PATH_MAX + 1);
-    } else {
-        path_length = tracee_get_path_for_fd(process, dirfd, path, PATH_MAX + 1);
-    }
-
-    if (path_length < 0)
+    if (tracee_get_normalized_path(process, dirfd, pathname, path) < 0)
         return;
 
-    if (path[path_length - 1] != '/') {
-        path[path_length] = '/';
-        path_length++;
-    }
-
-    tracee_read_string(process, pathname, path + path_length, PATH_MAX + 1 - path_length);
-
-    char normalized_path[PATH_MAX + 1];
-    realpath(path, normalized_path);
-
-    tracer_unlink_path(self, process, normalized_path);
+    tracer_unlink_path(self, process, path);
 }
 
 static void tracer_handle_unlink_syscall(s_tracer* self, s_tracee* process, const char* pathname)
@@ -315,28 +384,29 @@ static void tracer_handle_open_syscall(s_tracer* self, s_tracee* process, const 
                                        int flags, mode_t mode)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
-    tracer_report_read_write_for_flags(self, process, fd, flags);
+    tracer_report_read_write_for_flags(self, process, fd, flags, pathname, AT_FDCWD);
 }
 
 static void tracer_handle_openat_syscall(s_tracer* self, s_tracee* process, int dirfd,
                                          const char* pathname, int flags, mode_t mode)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
-    tracer_report_read_write_for_flags(self, process, fd, flags);
+    tracer_report_read_write_for_flags(self, process, fd, flags, pathname, dirfd);
 }
 
 static void tracer_handle_openat2_syscall(s_tracer* self, s_tracee* process, int dirfd,
                                           const char* pathname, struct open_how* how, size_t size)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
-    tracer_report_read_write_for_flags(self, process, fd, how->flags);
+    tracer_report_read_write_for_flags(self, process, fd, how->flags, pathname, dirfd);
 }
 
 static void tracer_handle_creat_syscall(s_tracer* self, s_tracee* process, const char* pathname,
                                         mode_t mode)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
-    tracer_report_read_write_for_flags(self, process, fd, O_WRONLY | O_CREAT | O_TRUNC);
+    tracer_report_read_write_for_flags(self, process, fd, O_WRONLY | O_CREAT | O_TRUNC, pathname,
+                                       AT_FDCWD);
 }
 
 static void tracer_handle_mkdir_at_path(s_tracer* self, s_tracee* process, const char* path)
@@ -358,28 +428,10 @@ static void tracer_handle_mkdirat_syscall(s_tracer* self, s_tracee* process, int
 {
     char path[PATH_MAX + 1];
 
-    ssize_t path_length = -1;
-
-    if (dirfd == AT_FDCWD) {
-        path_length = tracee_get_cwd(process, path, PATH_MAX + 1);
-    } else {
-        path_length = tracee_get_path_for_fd(process, dirfd, path, PATH_MAX + 1);
-    }
-
-    if (path_length < 0)
+    if (tracee_get_normalized_path(process, dirfd, pathname, path) < 0)
         return;
 
-    if (path[path_length - 1] != '/') {
-        path[path_length] = '/';
-        path_length++;
-    }
-
-    tracee_read_string(process, pathname, path + path_length, PATH_MAX + 1 - path_length);
-
-    char normalized_path[PATH_MAX + 1];
-    realpath(path, normalized_path);
-
-    tracer_handle_mkdir_at_path(self, process, normalized_path);
+    tracer_handle_mkdir_at_path(self, process, path);
 }
 
 static void tracer_handle_mkdir_syscall(s_tracer* self, s_tracee* process, const char* pathname,
@@ -392,23 +444,10 @@ static void tracer_handle_rmdir_syscall(s_tracer* self, s_tracee* process, const
 {
     char path[PATH_MAX + 1];
 
-    ssize_t length = tracee_get_cwd(process, path, PATH_MAX + 1);
-
-    if (length < 0) {
+    if (tracee_get_normalized_path(process, AT_FDCWD, pathname, path) < 0)
         return;
-    }
 
-    if (path[length - 1] != '/') {
-        path[length] = '/';
-        length++;
-    }
-
-    tracee_read_string(process, pathname, path + length, PATH_MAX + 1 - length);
-
-    char normalized_path[PATH_MAX + 1];
-    realpath(path, normalized_path);
-
-    tracer_unlink_path(self, process, normalized_path);
+    tracer_unlink_path(self, process, path);
 }
 
 // Handle rename as unlink of destination

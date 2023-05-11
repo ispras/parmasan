@@ -43,7 +43,7 @@ void tracer_child_task(s_tracer* self, char* argv[]);
 /* MARK: Syscall and fork handlers */
 
 void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int fd,
-                                        unsigned long long flags);
+                                        unsigned long long flags, const char* pathname, int dirfd);
 void tracer_handle_syscall(s_tracer* self, s_tracee* process);
 
 void tracer_handle_fork_clone(s_tracer* self, s_tracee* process);

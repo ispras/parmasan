@@ -107,14 +107,6 @@ void tracee_wait(s_tracee* self)
     waitpid(self->pid, &self->status, 0);
 }
 
-void tracee_get_stat_for_fd(s_tracee* self, int fd, struct stat* file_stat)
-{
-    char cwd_path[128] = {0};
-    sprintf(cwd_path, "/proc/%d/fd/%d", self->pid, fd);
-
-    stat(cwd_path, file_stat);
-}
-
 int tracee_get_path_for_fd(s_tracee* self, int fd, char* path, size_t path_size)
 {
     char fd_path[128] = {0};

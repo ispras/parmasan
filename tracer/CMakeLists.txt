@@ -11,6 +11,8 @@ add_executable(tracer
         tracer/seccomp.h
         tracer/tracer.h
         tracer/openat2.h
-        tracer/renameat2.h)
+        tracer/renameat2.h
+        tracer/path.c
+        tracer/path.h)
 
 target_include_directories(tracer PUBLIC .)
