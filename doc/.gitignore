@@ -6,3 +6,7 @@
 *.toc
 *.vrb
 *.pdf
+common.in
+common.c
+prog.c
+prog
