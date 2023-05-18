@@ -6,6 +6,7 @@ trigger_job:
   trigger:
     project: build-race-condition-detection/manifest
     branch: main
+    strategy: depend
 
 check_formatting:
   script:
