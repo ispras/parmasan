@@ -74,6 +74,27 @@ common.c: common.in
 will have different results...
 \end{frame}
 
+
+\begin{frame}[fragile]{Possible outcomes for \T{make -j2 all}}
+\begin{lstlisting}[language={},caption={OK}]
+gcc prog.c common.c -o prog
+ln common.in common.c
+gcc -shared common.c -o libcommon.so
+\end{lstlisting}
+
+\begin{lstlisting}[language={},caption={Race}]
+gcc prog.c common.c -o prog
+gcc -shared common.c -o libcommon.so
+cc1: fatal error: common.c: No such file or directory
+compilation terminated.
+make: *** [demo.make:21: libcommon.so] Error 1
+make: *** Waiting for unfinished jobs....
+cc1: fatal error: common.c: No such file or directory
+compilation terminated.
+make: *** [demo.make:17: prog] Error 1
+\end{lstlisting}
+\end{frame}
+
 \begin{frame}[fragile]{Dependency graph}
 \includegraphics[scale=0.75]{demo}
 \end{frame}
