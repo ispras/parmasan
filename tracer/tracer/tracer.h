@@ -10,6 +10,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pidset.h"
 #include "seccomp.h"
 #include "shared/structures.h"
 #include "tracee.h"
@@ -18,6 +19,7 @@ typedef struct tracer {
     int socket_fd;
     pid_t child_pid;
     bool bpf_enabled;
+    s_pidset stopped_pids;
 } s_tracer;
 
 // The entry point of the tracer. This function starts a socket connection on SOCKET_PATH and
@@ -46,8 +48,7 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
                                         unsigned long long flags, const char* pathname, int dirfd);
 void tracer_handle_syscall(s_tracer* self, s_tracee* process);
 
-void tracer_handle_fork_clone(s_tracer* self, s_tracee* process);
-void tracer_handle_possible_child(s_tracer* self, s_tracee* process);
+void tracer_handle_new_child(s_tracer* self, s_tracee* process);
 
 /* MARK: Socket methods */
 
@@ -75,6 +76,9 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path);
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self);
 
 /* MARK: Utilities */
+
+// Handles fork and clone events.
+void tracer_handle_possible_child(s_tracer* self, s_tracee* process);
 
 // Waits for any event from the child process. Writes the process pid and status into OUT_PROCESS.
 int tracer_wait_for_process(s_tracee* out_process);

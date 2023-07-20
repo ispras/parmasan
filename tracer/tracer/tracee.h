@@ -33,6 +33,10 @@ bool tracee_stopped_at_fork_or_clone(s_tracee* self);
 // Returns true if the tracee stopped at a seccomp event.
 bool tracee_stopped_at_seccomp(s_tracee* self);
 
+// Returns true if the tracee is a cloned/forked child that has not yet
+// executed its first instruction.
+bool tracee_stopped_at_child_init(s_tracee* self);
+
 // Returns true if the tracee stopped at a syscall.
 bool tracee_stopped_at_syscall(s_tracee* self);
 
@@ -74,5 +78,8 @@ int tracee_read_string(s_tracee* self, const char* process_addr, char* buffer, s
 
 // Asks ptrace to let the tracee continue with the given REQUEST argument.
 void tracee_ptrace_continue_with_request(s_tracee* self, enum __ptrace_request request);
+
+// Returns the pid of the tracee with use of the /proc filesystem.
+int tracee_get_ppid(s_tracee* process);
 
 #endif // TRACEE_H

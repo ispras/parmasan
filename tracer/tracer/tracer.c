@@ -123,6 +123,10 @@ void tracer_parent_task(s_tracer* self)
         return;
     }
 
+    pidset_create(&self->stopped_pids, 29);
+
+    ptrace(PTRACE_SEIZE, self->child_pid, 0, 0);
+
     tracer_report_child(self, getpid(), self->child_pid);
 
     wait(NULL);
@@ -134,6 +138,8 @@ void tracer_parent_task(s_tracer* self)
     }
 
     tracer_report_done(self);
+
+    pidset_destroy(&self->stopped_pids);
 }
 
 enum {
@@ -152,6 +158,12 @@ void tracer_bpf_loop(s_tracer* self)
     while (tracer_wait_for_process(&process) == 0) {
         if (tracee_stopped_at_seccomp(&process)) {
             tracer_handle_syscall(self, &process);
+        } else if (tracee_stopped_at_child_init(&process)) {
+            // Do not let the child run before we receive the clone or fork
+            // event from the parent. Otherwise, the process tree will be
+            // inconsistent.
+            pidset_add(&self->stopped_pids, process.pid);
+            continue;
         } else {
             tracer_handle_possible_child(self, &process);
         }
@@ -217,7 +229,6 @@ static bool tracer_setup_seccomp()
 
 void tracer_child_task(s_tracer* self, char* argv[])
 {
-    ptrace(PTRACE_TRACEME, 0, 0, 0);
     raise(SIGSTOP);
 
     if (self->bpf_enabled) {
@@ -542,6 +553,23 @@ void tracer_handle_fork_clone(s_tracer* self, s_tracee* process)
 {
     pid_t forked_pid = (pid_t)(tracee_ptrace_get_event_message(process));
     tracer_report_child(self, process->pid, forked_pid);
+
+    // Check if this pid was stopped with PTRACE_EVENT_STOP event.
+    bool is_waiting = pidset_contains(&self->stopped_pids, forked_pid);
+
+    if (!is_waiting) {
+        // The process was not stopped with PTRACE_EVENT_STOP event,
+        // so wait for it here to be able to send PTRACE_CONT to it
+        // and let it continue its execution.
+        int status = 0;
+        waitpid(forked_pid, &status, 0);
+    } else {
+        pidset_remove(&self->stopped_pids, forked_pid);
+    }
+
+    // Here the child is stopped at its first instruction.
+    // Allow the child to continue its execution.
+    ptrace(PTRACE_CONT, forked_pid, NULL, NULL);
 }
 
 /* MARK: Utilities */

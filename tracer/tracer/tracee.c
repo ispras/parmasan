@@ -44,7 +44,12 @@ bool tracee_stopped_at_fork_or_clone(s_tracee* self)
 
 bool tracee_stopped_at_seccomp(s_tracee* self)
 {
-    return (self->status >> 8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8))) != 0;
+    return (self->status >> 8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8)));
+}
+
+bool tracee_stopped_at_child_init(s_tracee* self)
+{
+    return (self->status >> 8 == (SIGTRAP | (PTRACE_EVENT_STOP << 8)));
 }
 
 bool tracee_stopped_at_syscall(s_tracee* self)

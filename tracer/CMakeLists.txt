@@ -13,6 +13,8 @@ add_executable(tracer
         tracer/openat2.h
         tracer/renameat2.h
         tracer/path.c
-        tracer/path.h)
+        tracer/path.h
+        tracer/pidset.h
+        tracer/pidset.c)
 
 target_include_directories(tracer PUBLIC .)
