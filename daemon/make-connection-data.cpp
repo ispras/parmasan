@@ -15,22 +15,23 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
 
     switch (event_type) {
     case MAKE_EVENT_DEPENDENCY:
-        if (!m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
-            return DaemonAction::DISCONNECT;
+        if (m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
+            return DaemonAction::CONTINUE;
         }
-        return DaemonAction::CONTINUE;
+        return DaemonAction::ERROR;
     case MAKE_EVENT_TARGET_PID:
         if (m_race_search_engine.m_target_database.read_target_pid_event(buffer)) {
             return DaemonAction::ACKNOWLEDGE;
         }
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     case MAKE_EVENT_DONE:
         if (mark_done()) {
             m_race_search_engine.search_for_races();
+            return DaemonAction::DISCONNECT;
         }
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     default:
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     }
 }
 void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,

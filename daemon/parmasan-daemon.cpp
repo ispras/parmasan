@@ -7,6 +7,11 @@ DaemonAction PS::ParmasanDaemon::handle_message()
 {
     auto action = action_for_message();
 
+    if (action == DaemonAction::ERROR) {
+        protocol_error();
+        action = DaemonAction::DISCONNECT;
+    }
+
     if (action != DaemonAction::DISCONNECT) {
         return action;
     }
@@ -41,15 +46,13 @@ DaemonAction PS::ParmasanDaemon::action_for_message()
 
     if (message_author != MessageAuthorType::MESSAGE_TYPE_MAKE &&
         message_author != MessageAuthorType::MESSAGE_TYPE_TRACER) {
-        protocol_error();
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     }
 
     int res = 0;
 
     if (sscanf(buffer, "%d %n", &m_last_message_pid, &res) <= 0) {
-        protocol_error();
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     }
 
     buffer += res;
@@ -59,8 +62,7 @@ DaemonAction PS::ParmasanDaemon::action_for_message()
         // Make sure that this packet is initial packet
         char event_type = buffer[0];
         if (event_type != GeneralEventType::GENERAL_EVENT_INIT) {
-            protocol_error();
-            return DaemonAction::DISCONNECT;
+            return DaemonAction::ERROR;
         }
 
         // Create a new connection
@@ -115,5 +117,5 @@ void PS::ParmasanDaemon::create_tracer_connection(pid_t pid)
 
 void PS::ParmasanDaemon::protocol_error()
 {
-    std::cerr << "Warning: Last message had caused a protocol error\n";
+    std::cerr << "Warning: Last message caused a protocol error\n";
 }

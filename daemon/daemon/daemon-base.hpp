@@ -6,7 +6,8 @@
 enum class DaemonAction {
     CONTINUE,
     DISCONNECT,
-    ACKNOWLEDGE
+    ACKNOWLEDGE,
+    ERROR
 };
 
 class DaemonBase
@@ -24,7 +25,7 @@ class DaemonBase
 
     virtual DaemonAction handle_message()
     {
-        return DaemonAction::DISCONNECT;
+        return DaemonAction::ERROR;
     }
 
     // MARK: Unix socket life cycle
