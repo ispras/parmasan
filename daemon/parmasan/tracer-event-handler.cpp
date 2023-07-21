@@ -32,8 +32,8 @@ bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* b
 
     TracerFileEvent event{};
 
-    if (sscanf(buffer, "%d %lu %lu %n", &event.pid, &event.file_entry.device,
-               &event.file_entry.inode, &res) <= 0) {
+    if (sscanf(buffer, "%d %lu %lu %d %n", &event.pid, &event.file_entry.device,
+               &event.file_entry.inode, &event.return_code, &res) <= 0) {
         return false;
     }
 

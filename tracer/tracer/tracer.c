@@ -44,11 +44,12 @@ void tracer_trace(char* argv[])
 }
 
 void tracer_report_file_op(s_tracer* self, e_tracer_event_type type, pid_t pid, const char* path,
-                           struct stat* stat)
+                           struct stat* stat, int retcode)
 {
     int len = snprintf(
-        socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %lu %s %d %lu %lu",
-        getpid(), TRACER_EVENT_CODES[type], strlen(path), path, pid, stat->st_dev, stat->st_ino);
+        socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %lu %s %d %lu %lu %d",
+        getpid(), TRACER_EVENT_CODES[type], strlen(path), path, pid, stat->st_dev, stat->st_ino,
+        retcode);
 
     send(self->socket_fd, socket_buffer, len, 0);
 }
@@ -311,9 +312,6 @@ static ssize_t resolve_symlink(char* path, ssize_t path_length, ssize_t path_cap
 void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int fd,
                                         unsigned long long flags, const char* pathname, int dirfd)
 {
-    if (fd < 0)
-        return;
-
     char path[LONG_PATH_MAX];
 
     ssize_t path_length = tracee_get_normalized_path(process, dirfd, pathname, path);
@@ -324,8 +322,9 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
     int pid = process->pid;
     struct stat file_stat = {0};
 
-    if (lstat(path, &file_stat) < 0)
-        return;
+    if (lstat(path, &file_stat) < 0) {
+        file_stat.st_ino = 0;
+    }
 
     flags &= O_ACCMODE;
 
@@ -344,7 +343,7 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
     // If file is a symlink, iterate through symlinks until the actual file is found.
     // For each symlink, report a read event.
     while (S_ISLNK(file_stat.st_mode)) {
-        tracer_report_file_op(self, TRACER_EVENT_READ, pid, path, &file_stat);
+        tracer_report_file_op(self, TRACER_EVENT_READ, pid, path, &file_stat, fd);
 
         path_length = resolve_symlink(path, path_length, sizeof(path));
 
@@ -354,7 +353,7 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
         }
     }
 
-    tracer_report_file_op(self, event, pid, path, &file_stat);
+    tracer_report_file_op(self, event, pid, path, &file_stat, fd);
 }
 
 void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path)
@@ -362,16 +361,20 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path)
     struct stat file_stat = {0};
 
     // Using lstat here as unlink does not resolve symlinks
-    if (lstat(path, &file_stat) < 0)
-        return;
+    if (lstat(path, &file_stat) < 0) {
+        file_stat.st_ino = 0;
+    }
+
+    int retcode = (int)tracee_get_syscall_return_code(process);
 
     bool is_inode_released = file_stat.st_nlink <= 1;
-    bool is_unlink_successful = tracee_get_syscall_return_code(process) == 0;
+    bool is_unlink_successful = retcode == 0;
 
-    tracer_report_file_op(self, TRACER_EVENT_UNLINK, process->pid, path, &file_stat);
+    tracer_report_file_op(self, TRACER_EVENT_UNLINK, process->pid, path, &file_stat, retcode);
 
     if (is_inode_released && is_unlink_successful) {
-        tracer_report_file_op(self, TRACER_EVENT_INODE_UNLINK, process->pid, path, &file_stat);
+        tracer_report_file_op(self, TRACER_EVENT_INODE_UNLINK, process->pid, path, &file_stat,
+                              retcode);
     }
 }
 
@@ -425,13 +428,15 @@ static void tracer_handle_mkdir_at_path(s_tracer* self, s_tracee* process, const
     // Wait until process is out from syscall to call stat
     // on newly created directory.
 
-    tracee_exit_from_syscall(process);
+    int retcode = (int)tracee_get_syscall_return_code(process);
+
     struct stat file_stat = {0};
 
-    if (stat(path, &file_stat) < 0)
-        return;
+    if (stat(path, &file_stat) < 0) {
+        file_stat.st_ino = 0;
+    }
 
-    tracer_report_file_op(self, TRACER_EVENT_WRITE, process->pid, path, &file_stat);
+    tracer_report_file_op(self, TRACER_EVENT_WRITE, process->pid, path, &file_stat, retcode);
 }
 
 static void tracer_handle_mkdirat_syscall(s_tracer* self, s_tracee* process, int dirfd,

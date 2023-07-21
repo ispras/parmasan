@@ -59,7 +59,7 @@ bool tracer_connect_to_socket(s_tracer* self);
 // Reports the file access on PATH with EVENT to the daemon. The STAT is used to determine
 // the inode and device of the file. PATH should be an absolute canonical path.
 void tracer_report_file_op(s_tracer* self, e_tracer_event_type event, pid_t pid, const char* path,
-                           struct stat* stat);
+                           struct stat* stat, int retcode);
 
 // Reports the child process CHILD forked from PARENT.
 void tracer_report_child(s_tracer* self, pid_t parent, pid_t child);

@@ -37,6 +37,14 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
                                                TracerFileEvent* event,
                                                const std::string& file_path)
 {
+    if (event->return_code < 0) {
+        return;
+    }
+
+    if (event->file_entry.inode == 0) {
+        return;
+    }
+
     EntryData* entry_data =
         m_race_search_engine.m_filename_database.update_file(file_path, event->file_entry);
 

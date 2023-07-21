@@ -43,6 +43,7 @@ struct TracerChildEvent {
 struct TracerFileEvent {
     pid_t pid;
     Entry file_entry;
+    int return_code;
 };
 
 FileAccessType get_file_operation(TracerEventType event);
