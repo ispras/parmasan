@@ -29,6 +29,7 @@ class FilenameDatabase
 
     void reset()
     {
+        m_root = std::make_unique<File>("/");
         m_entries.clear();
     }
 
