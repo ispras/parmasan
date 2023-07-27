@@ -276,7 +276,13 @@ static ssize_t tracee_get_normalized_path(s_tracee* process, int dirfd, const ch
 
     int length = tracee_read_string(process, pathname, path + path_length,
                                     PATH_MAX + 1 - path_length);
+
     path[length + path_length] = '\0';
+    if (path[path_length] == '/') {
+        // If the path is absolute, copy it to the beginning of the buffer.
+        memmove(path, path + path_length, length + 1);
+    }
+
     return (ssize_t)normalize_path(path);
 }
 
