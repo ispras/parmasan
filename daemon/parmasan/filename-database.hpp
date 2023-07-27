@@ -27,6 +27,11 @@ class FilenameDatabase
         return m_entries;
     };
 
+    void reset()
+    {
+        m_entries.clear();
+    }
+
   private:
     std::unique_ptr<File> m_root = std::make_unique<File>("/");
     std::unordered_map<Entry, std::unique_ptr<EntryData>> m_entries;

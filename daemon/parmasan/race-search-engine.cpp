@@ -116,4 +116,10 @@ void RaceSearchEngine::dump(EntryData* entry)
     }
 }
 
+void RaceSearchEngine::reset()
+{
+    m_filename_database.reset();
+    m_target_database.reset();
+}
+
 } // namespace PS

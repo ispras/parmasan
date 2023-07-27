@@ -68,3 +68,8 @@ PS::Target* PS::TargetDatabase::get_target(pid_t pid)
         return nullptr;
     return it->second;
 }
+void PS::TargetDatabase::reset()
+{
+    m_target_by_pid_instances.clear();
+    m_targets_by_names.clear();
+}

@@ -5,7 +5,7 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
 {
 
     // Get the first character of the buffer, which is the event type.
-    auto event_type = static_cast<MakeEventType>(buffer[0]);
+    auto event_type = buffer[0];
 
     // Read the entire word from the buffer, but ignore it
     // because we already know what the event type is.
@@ -24,6 +24,20 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
             return DaemonAction::ACKNOWLEDGE;
         }
         return DaemonAction::ERROR;
+    case GENERAL_EVENT_INIT:
+        // As it turned out, GNU make (and remake) have its own way
+        // of handling makefile updates. When a makefile is updated,
+        // the make process just re-executes itself without any kind
+        // of shutdown. This means that the init event can be received
+        // multiple times from the seemingly same process. The best way
+        // of interpreting this is to pretend that old make process have
+        // sent MAKE_EVENT_DONE, and new make process have sent
+        // GENERAL_EVENT_INIT. Thus, in a case of repeated init event,
+        // search for races and reset the connection state.
+        m_race_search_engine.search_for_races();
+        m_race_search_engine.reset();
+
+        return DaemonAction::ACKNOWLEDGE;
     case MAKE_EVENT_DONE:
         if (mark_done()) {
             m_race_search_engine.search_for_races();

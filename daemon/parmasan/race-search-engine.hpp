@@ -33,6 +33,7 @@ class RaceSearchEngine
     void search_for_races();
     void search_for_races_on_path(File* file);
     void search_for_races_on_entry(EntryData* entry);
+    void reset();
 
     void dump(EntryData* file);
     void report_race(const File* file, const AccessRecord& access_a,
