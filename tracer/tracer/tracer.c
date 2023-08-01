@@ -301,7 +301,7 @@ static ssize_t resolve_symlink(char* path, ssize_t path_length, ssize_t path_cap
 
     // If the link target is absolute, we can just replace the path with it.
     if (path[link_offset] == '/') {
-        memcpy(path, path + link_offset, readlink_length);
+        memmove(path, path + link_offset, readlink_length);
         path[readlink_length] = '\0';
         return readlink_length;
     }
