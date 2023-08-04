@@ -32,7 +32,7 @@ size_t normalize_path(char* path)
                 dot_count = 0;
             }
 
-            if (path[dest_idx - 1] != '/') {
+            if (dest_idx < 1 || path[dest_idx - 1] != '/') {
                 path[dest_idx++] = '/';
             }
         } else if (path[src_idx] == '.' && start) {
