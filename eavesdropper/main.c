@@ -9,7 +9,7 @@
 #include <sys/signal.h>
 #include <sys/signalfd.h>
 
-#define MAX_MESSAGE_SIZE 1024
+#define MAX_MESSAGE_SIZE (PATH_MAX * 4)
 
 int check_read_fd(const fd_set* mask, int readfd, int writefd, char buf[MAX_MESSAGE_SIZE],
                   const char* message)
