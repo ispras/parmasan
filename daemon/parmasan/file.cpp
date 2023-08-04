@@ -1,5 +1,6 @@
 
 #include "file.hpp"
+#include <sstream>
 
 std::string PS::File::get_path() const
 {

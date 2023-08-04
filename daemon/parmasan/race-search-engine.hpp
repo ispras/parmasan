@@ -5,10 +5,8 @@
 #include <ostream>
 #include <unordered_map>
 #include "access-record.hpp"
-#include "entry.hpp"
 #include "file.hpp"
 #include "filename-database.hpp"
-#include "iostream"
 #include "target-database.hpp"
 #include "tracer-event-handler.hpp"
 
@@ -29,23 +27,16 @@ class RaceSearchEngine
     explicit RaceSearchEngine(std::ostream& out_stream)
         : m_out_stream(out_stream) {}
 
-    bool search_for_dependency(Target* from, Target* to);
-    void search_for_races();
-    void search_for_races_on_path(File* file);
-    void search_for_races_on_entry(EntryData* entry);
     void reset();
 
-    void dump(EntryData* file);
-    void report_race(const File* file, const AccessRecord& access_a,
-                     const AccessRecord& access_b) const;
-
-  private:
-    std::ostream& m_out_stream;
-
     template <typename RequiredDependencyGenerator>
-    void check_access_ordering(File* file, RequiredDependencyGenerator& dependencies_to_check)
+    void check_required_dependencies(File* file,
+                                     RequiredDependencyGenerator& dependencies_to_check)
     {
-        while (dependencies_to_check.next()) {
+        do {
+            if (!dependencies_to_check.is_required_dependency()) {
+                continue;
+            }
 
             // Ignore all the races with inode_unlink operation, as this operation
             // is intended to mark different unrelated generations of inode entries.
@@ -59,8 +50,15 @@ class RaceSearchEngine
                 report_race(file, *dependencies_to_check.left_access,
                             *dependencies_to_check.right_access);
             }
-        }
+        } while (dependencies_to_check.next());
     }
+
+  private:
+    bool search_for_dependency(Target* from, Target* to);
+    void report_race(const File* file, const AccessRecord& access_a,
+                     const AccessRecord& access_b) const;
+
+    std::ostream& m_out_stream;
 };
 
 } // namespace PS

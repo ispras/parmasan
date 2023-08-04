@@ -3,8 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
-#include "entry.hpp"
-#include "file.hpp"
 #include "shared/structures.hpp"
 
 namespace PS

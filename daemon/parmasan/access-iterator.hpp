@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <list>
 #include "access-record.hpp"
 
 namespace PS
@@ -29,19 +30,12 @@ struct AccessIterator {
     using pointer = const AccessRecord*;
     using reference = const AccessRecord&;
 
-    explicit AccessIterator(const std::vector<AccessRecord>& container)
+    explicit AccessIterator(const std::list<AccessRecord>& container)
     {
-        position = container.data();
-        end = position + container.size();
-
-        // If there are any invalid operations at the beginning
-        // of the container, skip them.
-        if (*this && SkipAccessPredicate()(*position))
-            ++(*this);
+        position = container.begin();
     }
 
-    const AccessRecord* position;
-    const AccessRecord* end;
+    std::list<AccessRecord>::const_iterator position;
 
     reference operator*() const
     {
@@ -49,13 +43,13 @@ struct AccessIterator {
     }
     pointer operator->() const
     {
-        return position;
+        return &*position;
     }
 
     AccessIterator& operator++()
     {
         while (*this) {
-            position++;
+            ++position;
 
             if (!*this || !SkipAccessPredicate()(*position)) {
                 break;
@@ -95,7 +89,16 @@ struct AccessIterator {
 
     explicit operator bool() const
     {
-        return position < end;
+        return position->is_valid();
+    }
+
+    bool skip_if_needed()
+    {
+        if (*this && SkipAccessPredicate()(*position)) {
+            ++(*this);
+            return true;
+        }
+        return false;
     }
 };
 

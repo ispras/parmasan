@@ -14,7 +14,6 @@ PS::EntryData* PS::FilenameDatabase::update_file(const std::string& pathname,
         file = file->get_child(std::string(component.value()));
     }
 
-    file->m_entry = entry;
     std::unique_ptr<EntryData>& entry_data = m_entries[entry];
     if (!entry_data)
         entry_data = std::make_unique<EntryData>();

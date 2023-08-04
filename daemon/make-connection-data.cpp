@@ -33,17 +33,12 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
         // of interpreting this is to pretend that old make process have
         // sent MAKE_EVENT_DONE, and new make process have sent
         // GENERAL_EVENT_INIT. Thus, in a case of repeated init event,
-        // search for races and reset the connection state.
-        m_race_search_engine.search_for_races();
+        // just reset the connection state.
         m_race_search_engine.reset();
 
         return DaemonAction::ACKNOWLEDGE;
     case MAKE_EVENT_DONE:
-        if (mark_done()) {
-            m_race_search_engine.search_for_races();
-            return DaemonAction::DISCONNECT;
-        }
-        return DaemonAction::ERROR;
+        return DaemonAction::DISCONNECT;
     default:
         return DaemonAction::ERROR;
     }
@@ -81,9 +76,17 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
 
     AccessRecord record{.access_type = get_file_operation(event_type), .target = target};
 
-    entry_data->accesses.push_back(record);
-
+    // Report the access both to the entry-bound and path-bound dependency finder.
     // After update_file call, last_known_file field stores the reference to the
-    // file at file_path.
-    entry_data->last_known_file->m_accesses.push_back(record);
+    // file at file_path, so it can be used right away.
+
+    entry_data->dependency_finder.push_access(record);
+    m_race_search_engine.check_required_dependencies(
+        entry_data->last_known_file,
+        entry_data->dependency_finder);
+
+    entry_data->last_known_file->m_dependency_finder.push_access(record);
+    m_race_search_engine.check_required_dependencies(
+        entry_data->last_known_file,
+        entry_data->last_known_file->m_dependency_finder);
 }

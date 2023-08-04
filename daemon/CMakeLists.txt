@@ -21,7 +21,7 @@ add_executable(parmasan
         parmasan/filename-database.hpp
         parmasan/race-search-engine.cpp
         parmasan/race-search-engine.hpp
-        parmasan/required-dependency-generator.hpp
+        parmasan/required-dependency-finder.hpp
         parmasan/target-database.cpp
         parmasan/target-database.hpp
         parmasan/target.cpp
@@ -35,6 +35,6 @@ add_executable(parmasan
         utils/path-walker.cpp
         utils/path-walker.hpp
         utils/run-shell.cpp
-        utils/run-shell.hpp)
+        utils/run-shell.hpp parmasan/entry-bound-dependency-search.hpp parmasan/path-bound-dependency-search.hpp parmasan/access-record.cpp)
 
 target_include_directories(parmasan PUBLIC .)

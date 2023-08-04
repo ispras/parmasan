@@ -1,29 +1,21 @@
 #pragma once
 
+#include <list>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
-#include <vector>
-#include "access-record.hpp"
-#include "entry-history.hpp"
-#include "entry.hpp"
-#include "file-access-type.hpp"
-#include "target.hpp"
+#include "path-bound-dependency-search.hpp"
 
 namespace PS
 {
-
-class File;
 
 class File
 {
   public:
     std::string m_name;
     std::unordered_map<std::string, std::unique_ptr<File>> m_children{};
-    Entry m_entry{};
     File* m_parent = nullptr;
-    std::vector<AccessRecord> m_accesses{};
+    PathBoundDependencySearch::DependencyFinder m_dependency_finder;
 
     File(File&& move) = delete;
     File(const File& copy) = delete;

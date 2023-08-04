@@ -1,9 +1,11 @@
 #pragma once
 
 #include <fstream>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
-#include "file.hpp"
+#include "target.hpp"
 
 namespace PS
 {
