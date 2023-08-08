@@ -67,12 +67,12 @@ void tracer_report_child(s_tracer* self, pid_t parent, pid_t child)
     tracer_wait_for_parmasan_acknowledgement(self);
 }
 
-void tracer_report_done(s_tracer* self)
+void tracer_report_die(s_tracer* self, pid_t pid)
 {
-    e_tracer_event_type event = TRACER_EVENT_DONE;
+    e_tracer_event_type event = TRACER_EVENT_DIE;
 
-    int len = snprintf(socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s", getpid(),
-                       TRACER_EVENT_CODES[event]);
+    int len = snprintf(socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %d",
+                       getpid(), TRACER_EVENT_CODES[event], pid);
     send(self->socket_fd, socket_buffer, len, 0);
 }
 
@@ -138,14 +138,15 @@ void tracer_parent_task(s_tracer* self)
         tracer_ptrace_loop(self);
     }
 
-    tracer_report_done(self);
+    tracer_report_die(self, getpid());
 
     pidset_destroy(&self->stopped_pids);
 }
 
 enum {
     TRACER_GENERAL_PTRACE_FLAGS = PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEFORK |
-                                  PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC
+                                  PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC |
+                                  PTRACE_O_TRACEEXIT
 };
 
 void tracer_bpf_loop(s_tracer* self)
@@ -165,8 +166,10 @@ void tracer_bpf_loop(s_tracer* self)
             // inconsistent.
             pidset_add(&self->stopped_pids, process.pid);
             continue;
-        } else {
-            tracer_handle_possible_child(self, &process);
+        } else if (tracee_exited(&process)) {
+            tracer_report_die(self, process.pid);
+        } else if (tracee_stopped_at_fork_or_clone(&process)) {
+            tracer_handle_fork_clone(self, &process);
         }
 
         tracee_ptrace_continue(&process);
@@ -189,8 +192,16 @@ void tracer_ptrace_loop(s_tracer* self)
             // end up being handled twice
 
             tracee_exit_from_syscall(&process);
-        } else {
-            tracer_handle_possible_child(self, &process);
+        } else if (tracee_stopped_at_child_init(&process)) {
+            // Do not let the child run before we receive the clone or fork
+            // event from the parent. Otherwise, the process tree will be
+            // inconsistent.
+            pidset_add(&self->stopped_pids, process.pid);
+            continue;
+        } else if (tracee_exited(&process)) {
+            tracer_report_die(self, process.pid);
+        } else if (tracee_stopped_at_fork_or_clone(&process)) {
+            tracer_handle_fork_clone(self, &process);
         }
 
         tracee_ptrace_continue_to_syscall(&process);
@@ -584,13 +595,6 @@ void tracer_handle_fork_clone(s_tracer* self, s_tracee* process)
 }
 
 /* MARK: Utilities */
-
-void tracer_handle_possible_child(s_tracer* self, s_tracee* process)
-{
-    if (tracee_stopped_at_fork_or_clone(process)) {
-        tracer_handle_fork_clone(self, process);
-    }
-}
 
 int tracer_wait_for_process(s_tracee* out_process)
 {

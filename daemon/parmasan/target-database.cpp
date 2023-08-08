@@ -8,7 +8,7 @@ bool PS::TargetDatabase::read_target_pid_event(const char* buffer)
     size_t len = 0;
     int res = 0;
 
-    if (sscanf(buffer, "%zu %n", &len, &res) <= 0) {
+    if (sscanf(buffer, "%zu %n", &len, &res) != 1) {
         return false;
     }
 
@@ -18,7 +18,7 @@ bool PS::TargetDatabase::read_target_pid_event(const char* buffer)
     buffer += len;
     pid_t pid = 0;
 
-    if (sscanf(buffer, "%d %n", &pid, &res) <= 0) {
+    if (sscanf(buffer, "%d %n", &pid, &res) != 1) {
         return false;
     }
 
@@ -31,14 +31,14 @@ bool PS::TargetDatabase::read_dependency_event(const char* buffer)
     size_t str_length = 0;
     int res = 0;
 
-    if (sscanf(buffer, "%zu %n", &str_length, &res) <= 0) {
+    if (sscanf(buffer, "%zu %n", &str_length, &res) != 1) {
         return false;
     }
     buffer += res;
     std::string target_name(buffer, str_length);
 
     buffer += str_length;
-    if (sscanf(buffer, "%zu %n", &str_length, &res) <= 0) {
+    if (sscanf(buffer, "%zu %n", &str_length, &res) != 1) {
         return false;
     }
     buffer += res;

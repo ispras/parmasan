@@ -36,6 +36,8 @@ class ParmasanDaemon : public DaemonBase
 
     void create_tracer_connection(pid_t pid);
 
+    void delete_connection(pid_t pid);
+
     TracerConnectionData* get_tracer_for_pid(pid_t pid);
 
     std::unordered_set<TracerConnectionData*> m_tracers{};

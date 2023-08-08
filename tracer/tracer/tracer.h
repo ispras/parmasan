@@ -48,7 +48,7 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
                                         unsigned long long flags, const char* pathname, int dirfd);
 void tracer_handle_syscall(s_tracer* self, s_tracee* process);
 
-void tracer_handle_new_child(s_tracer* self, s_tracee* process);
+void tracer_handle_fork_clone(s_tracer* self, s_tracee* process);
 
 /* MARK: Socket methods */
 
@@ -64,8 +64,10 @@ void tracer_report_file_op(s_tracer* self, e_tracer_event_type event, pid_t pid,
 // Reports the child process CHILD forked from PARENT.
 void tracer_report_child(s_tracer* self, pid_t parent, pid_t child);
 
-// Informs the daemon that the tracer is about to exit.
-void tracer_report_done(s_tracer* self);
+// Informs the daemon that the process with PID is about to exit. This must
+// be the last event received from the given PID. PID 0 refers to the tracer
+// process itself.
+void tracer_report_die(s_tracer* self, pid_t pid);
 
 // Informs the daemon that the file on PATH was deleted. If the file does not have any
 // hardlinks, the INODE_UNLINK event is also reported.
@@ -76,9 +78,6 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path);
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self);
 
 /* MARK: Utilities */
-
-// Handles fork and clone events.
-void tracer_handle_possible_child(s_tracer* self, s_tracee* process);
 
 // Waits for any event from the child process. Writes the process pid and status into OUT_PROCESS.
 int tracer_wait_for_process(s_tracee* out_process);

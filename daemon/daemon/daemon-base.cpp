@@ -85,7 +85,7 @@ void DaemonBase::handle_connection_data()
             m_buffer[packet_length] = '\0';
             DaemonAction action = handle_message();
 
-            if (action == DaemonAction::ACKNOWLEDGE) {
+            if (action.action == DaemonActionCode::ACKNOWLEDGE) {
                 send_acknowledgement_packet(m_read_fd);
             }
         } else {

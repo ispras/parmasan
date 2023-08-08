@@ -17,7 +17,7 @@ typedef enum tracer_event_type {
     TRACER_EVENT_UNLINK = 3,
     TRACER_EVENT_INODE_UNLINK = 4,
     TRACER_EVENT_CHILD = 5,
-    TRACER_EVENT_DONE = 6
+    TRACER_EVENT_DIE = 6
 } e_tracer_event_type;
 
 extern const char* TRACER_EVENT_CODES[];

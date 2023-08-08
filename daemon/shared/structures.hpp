@@ -21,23 +21,17 @@ enum TracerEventType : char {
     TRACER_EVENT_UNLINK = 'U',
     TRACER_EVENT_INODE_UNLINK = 'I',
     TRACER_EVENT_CHILD = 'C',
-    TRACER_EVENT_DONE = 'F'
+    TRACER_EVENT_DIE = 'D'
 };
 
 enum MakeEventType : char {
     MAKE_EVENT_TARGET_PID = 'T',
     MAKE_EVENT_DEPENDENCY = 'D',
-    MAKE_EVENT_DONE = 'F'
 };
 
 enum MessageAuthorType : char {
     MESSAGE_TYPE_TRACER = 'T',
     MESSAGE_TYPE_MAKE = 'M',
-};
-
-struct TracerChildEvent {
-    pid_t pid;
-    pid_t ppid;
 };
 
 struct TracerFileEvent {

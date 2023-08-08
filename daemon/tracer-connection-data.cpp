@@ -19,22 +19,13 @@ DaemonAction PS::TracerConnectionData::handle_packet(const char* buffer)
     case TRACER_EVENT_READ_WRITE:
     case TRACER_EVENT_UNLINK:
     case TRACER_EVENT_INODE_UNLINK:
-        if (m_tracer_event_handler.read_file_event(event_type, buffer)) {
-            return DaemonAction::CONTINUE;
-        }
-        return DaemonAction::ERROR;
+        return m_tracer_event_handler.read_file_event(event_type, buffer);
     case TRACER_EVENT_CHILD:
-        if (m_tracer_event_handler.read_child_event(buffer)) {
-            return DaemonAction::ACKNOWLEDGE;
-        }
-        return DaemonAction::ERROR;
-    case TRACER_EVENT_DONE:
-        if (mark_done()) {
-            return DaemonAction::DISCONNECT;
-        }
-        return DaemonAction::ERROR;
+        return m_tracer_event_handler.read_child_event(buffer);
+    case TRACER_EVENT_DIE:
+        return m_tracer_event_handler.read_die_event(buffer);
     default:
-        return DaemonAction::ERROR;
+        return DaemonActionCode::ERROR;
     }
 }
 void PS::TracerConnectionData::make_process_attached(pid_t pid, PS::MakeConnectionData* make_data)

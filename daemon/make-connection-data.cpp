@@ -16,14 +16,14 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
     switch (event_type) {
     case MAKE_EVENT_DEPENDENCY:
         if (m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
-            return DaemonAction::CONTINUE;
+            return DaemonActionCode::CONTINUE;
         }
-        return DaemonAction::ERROR;
+        return DaemonActionCode::ERROR;
     case MAKE_EVENT_TARGET_PID:
         if (m_race_search_engine.m_target_database.read_target_pid_event(buffer)) {
-            return DaemonAction::ACKNOWLEDGE;
+            return DaemonActionCode::ACKNOWLEDGE;
         }
-        return DaemonAction::ERROR;
+        return DaemonActionCode::ERROR;
     case GENERAL_EVENT_INIT:
         // As it turned out, GNU make (and remake) have its own way
         // of handling makefile updates. When a makefile is updated,
@@ -31,16 +31,14 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
         // of shutdown. This means that the init event can be received
         // multiple times from the seemingly same process. The best way
         // of interpreting this is to pretend that old make process have
-        // sent MAKE_EVENT_DONE, and new make process have sent
-        // GENERAL_EVENT_INIT. Thus, in a case of repeated init event,
-        // just reset the connection state.
+        // died, and new make process have sent GENERAL_EVENT_INIT.
+        // Thus, in a case of repeated init event, just reset the connection
+        // state.
         m_race_search_engine.reset();
 
-        return DaemonAction::ACKNOWLEDGE;
-    case MAKE_EVENT_DONE:
-        return DaemonAction::DISCONNECT;
+        return DaemonActionCode::ACKNOWLEDGE;
     default:
-        return DaemonAction::ERROR;
+        return DaemonActionCode::ERROR;
     }
 }
 void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,

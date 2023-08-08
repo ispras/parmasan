@@ -6,28 +6,19 @@
 DaemonAction PS::ParmasanDaemon::handle_message()
 {
     auto action = action_for_message();
+    auto code = action.action;
 
-    if (action == DaemonAction::ERROR) {
+    if (code == DaemonActionCode::ERROR) {
         protocol_error();
-        action = DaemonAction::DISCONNECT;
     }
 
-    if (action != DaemonAction::DISCONNECT) {
-        return action;
+    if (code == DaemonActionCode::DISCONNECT || code == DaemonActionCode::ERROR) {
+        auto pid = action.payload.pid;
+        if (pid == 0) {
+            pid = m_last_message_pid;
+        }
+        delete_connection(pid);
     }
-
-    // Remove connection from the list of connections
-
-    if (m_last_message_pid <= 0) {
-        return action;
-    }
-
-    auto it = m_connections.find(m_last_message_pid);
-    if (!(it != m_connections.end())) {
-        return action;
-    }
-
-    m_connections.erase(it);
 
     return action;
 }
@@ -46,13 +37,13 @@ DaemonAction PS::ParmasanDaemon::action_for_message()
 
     if (message_author != MessageAuthorType::MESSAGE_TYPE_MAKE &&
         message_author != MessageAuthorType::MESSAGE_TYPE_TRACER) {
-        return DaemonAction::ERROR;
+        return DaemonActionCode::ERROR;
     }
 
     int res = 0;
 
-    if (sscanf(buffer, "%d %n", &m_last_message_pid, &res) <= 0) {
-        return DaemonAction::ERROR;
+    if (sscanf(buffer, "%d %n", &m_last_message_pid, &res) != 1) {
+        return DaemonActionCode::ERROR;
     }
 
     buffer += res;
@@ -62,7 +53,7 @@ DaemonAction PS::ParmasanDaemon::action_for_message()
         // Make sure that this packet is initial packet
         char event_type = buffer[0];
         if (event_type != GeneralEventType::GENERAL_EVENT_INIT) {
-            return DaemonAction::ERROR;
+            return DaemonActionCode::ERROR;
         }
 
         // Create a new connection
@@ -73,7 +64,7 @@ DaemonAction PS::ParmasanDaemon::action_for_message()
             create_make_connection(m_last_message_pid);
         }
 
-        return DaemonAction::ACKNOWLEDGE;
+        return DaemonActionCode::ACKNOWLEDGE;
     }
 
     auto* data = m_connections[m_last_message_pid].get();
@@ -118,4 +109,12 @@ void PS::ParmasanDaemon::create_tracer_connection(pid_t pid)
 void PS::ParmasanDaemon::protocol_error()
 {
     std::cerr << "Warning: Last message caused a protocol error\n";
+}
+
+void PS::ParmasanDaemon::delete_connection(pid_t pid)
+{
+    auto it = m_connections.find(pid);
+    if (it != m_connections.end()) {
+        m_connections.erase(it);
+    }
 }

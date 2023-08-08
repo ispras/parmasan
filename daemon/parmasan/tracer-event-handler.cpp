@@ -15,14 +15,14 @@ PS::MakeConnectionData* PS::TracerEventHandler::get_make_process_for_pid(pid_t p
     }
     return nullptr;
 }
-bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* buffer)
+DaemonAction PS::TracerEventHandler::read_file_event(TracerEventType type, const char* buffer)
 {
 
     // Read length of the path
     size_t length = 0;
     int res = 0;
-    if (sscanf(buffer, "%zu %n", &length, &res) <= 0) {
-        return false;
+    if (sscanf(buffer, "%zu %n", &length, &res) != 1) {
+        return DaemonActionCode::ERROR;
     }
     buffer += res;
 
@@ -33,38 +33,46 @@ bool PS::TracerEventHandler::read_file_event(TracerEventType type, const char* b
     TracerFileEvent event{};
 
     if (sscanf(buffer, "%d %lu %lu %d %n", &event.pid, &event.file_entry.device,
-               &event.file_entry.inode, &event.return_code, &res) <= 0) {
-        return false;
+               &event.file_entry.inode, &event.return_code, &res) != 4) {
+        return DaemonActionCode::ERROR;
     }
 
     PS::MakeConnectionData* connection_data = get_make_process_for_pid(event.pid);
 
     if (!connection_data) {
-        return true;
+        return DaemonActionCode::CONTINUE;
     }
 
     connection_data->handle_file_event(type, &event, file_path);
 
-    return true;
+    return DaemonActionCode::CONTINUE;
 }
 
-bool PS::TracerEventHandler::read_child_event(const char* buffer)
+DaemonAction PS::TracerEventHandler::read_child_event(const char* buffer)
 {
-    TracerChildEvent event{};
+    pid_t pid = 0;
+    pid_t ppid = 0;
 
-    if (sscanf(buffer, "%d %d", &event.pid, &event.ppid) < 0) {
-        return false;
+    if (sscanf(buffer, "%d %d", &pid, &ppid) != 2) {
+        return DaemonActionCode::ERROR;
     }
 
-    register_child(event.ppid, event.pid);
+    m_pid_database[pid].ppid = ppid;
 
-    return true;
+    return DaemonActionCode::ACKNOWLEDGE;
 }
-void PS::TracerEventHandler::register_child(pid_t ppid, pid_t pid)
+
+DaemonAction PS::TracerEventHandler::read_die_event(const char* buffer)
 {
-    auto& pid_data = m_pid_database[pid];
-    pid_data.ppid = ppid;
+    pid_t pid = 0;
+
+    if (sscanf(buffer, "%d", &pid) != 1) {
+        return DaemonActionCode::ERROR;
+    }
+
+    return DaemonAction::disconnect(pid);
 }
+
 void PS::TracerEventHandler::assign_make_process(pid_t pid, PS::MakeConnectionData* make_process)
 {
     m_pid_database[pid].make_process = make_process;

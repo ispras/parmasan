@@ -30,6 +30,9 @@ unsigned long long int tracee_get_syscall_return_code(s_tracee* self);
 // Returns true if the tracee was stopped at fork or clone.
 bool tracee_stopped_at_fork_or_clone(s_tracee* self);
 
+// Returns true if the tracee stopped at PTRACE_EVENT_EXIT event
+bool tracee_exited(s_tracee* self);
+
 // Returns true if the tracee stopped at a seccomp event.
 bool tracee_stopped_at_seccomp(s_tracee* self);
 

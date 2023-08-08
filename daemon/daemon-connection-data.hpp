@@ -21,7 +21,7 @@ class DaemonConnectionData
 
     virtual DaemonAction handle_packet(const char* /*buffer*/)
     {
-        return DaemonAction::CONTINUE;
+        return DaemonActionCode::CONTINUE;
     }
 
     bool mark_done();

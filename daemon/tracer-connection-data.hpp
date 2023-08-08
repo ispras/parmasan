@@ -5,6 +5,8 @@
 namespace PS
 {
 
+class ParmasanDaemon;
+
 class TracerConnectionData : public DaemonConnectionData
 {
   public:
