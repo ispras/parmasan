@@ -17,7 +17,6 @@ size_t normalize_path(char* path)
         if (path[src_idx] == '/' || path[src_idx] == '\0') {
             start = true;
             if (dot_count == 1) {
-                src_idx++;
                 dot_count = 0;
                 continue;
             } else if (dot_count == 2) {
