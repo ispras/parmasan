@@ -16,7 +16,7 @@ namespace PS
 class RaceSearchEngine
 {
   public:
-    TargetDatabase m_target_database{};
+    std::vector<std::unique_ptr<TargetDatabase>> m_target_databases{};
     FilenameDatabase m_filename_database{};
 
     RaceSearchEngine(RaceSearchEngine&& move) = delete;
@@ -26,8 +26,6 @@ class RaceSearchEngine
 
     explicit RaceSearchEngine(std::ostream& out_stream)
         : m_out_stream(out_stream) {}
-
-    void reset();
 
     template <typename RequiredDependencyGenerator>
     void check_required_dependencies(File* file,
@@ -46,15 +44,22 @@ class RaceSearchEngine
             }
 
             m_traverse_num++;
-            if (!search_for_dependency(dependencies_to_check.left_access->target,
-                                       dependencies_to_check.right_access->target)) {
+            if (!find_common_make_and_dependency(dependencies_to_check.left_access->target,
+                                                 dependencies_to_check.right_access->target)) {
                 report_race(file, *dependencies_to_check.left_access,
                             *dependencies_to_check.right_access);
             }
         } while (dependencies_to_check.next());
     }
 
+    TargetDatabase* create_target_database()
+    {
+        m_target_databases.push_back(std::make_unique<TargetDatabase>());
+        return m_target_databases.back().get();
+    }
+
   private:
+    bool find_common_make_and_dependency(Target* from, Target* to);
     bool search_for_dependency(Target* from, Target* to);
     void report_race(const File* file, const AccessRecord& access_a,
                      const AccessRecord& access_b) const;

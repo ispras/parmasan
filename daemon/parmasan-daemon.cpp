@@ -83,9 +83,10 @@ PS::TracerConnectionData* PS::ParmasanDaemon::get_tracer_for_pid(pid_t pid)
 
 void PS::ParmasanDaemon::create_make_connection(pid_t pid)
 {
-    auto make_data = std::make_unique<MakeConnectionData>(-1, m_dump_output);
+    auto make_data = std::make_unique<MakeConnectionData>(-1, pid);
 
     TracerConnectionData* tracer = get_tracer_for_pid(pid);
+
     if (tracer) {
         make_data->attach_to_tracer(tracer);
         tracer->make_process_attached(pid, make_data.get());
@@ -100,7 +101,7 @@ void PS::ParmasanDaemon::create_make_connection(pid_t pid)
 
 void PS::ParmasanDaemon::create_tracer_connection(pid_t pid)
 {
-    auto tracer_data = std::make_unique<TracerConnectionData>(-1);
+    auto tracer_data = std::make_unique<TracerConnectionData>(-1, m_dump_output);
     m_tracers.insert(tracer_data.get());
 
     m_connections.insert({pid, std::move(tracer_data)});

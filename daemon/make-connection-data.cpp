@@ -3,7 +3,6 @@
 
 DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
 {
-
     // Get the first character of the buffer, which is the event type.
     auto event_type = buffer[0];
 
@@ -15,12 +14,12 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
 
     switch (event_type) {
     case MAKE_EVENT_DEPENDENCY:
-        if (m_race_search_engine.m_target_database.read_dependency_event(buffer)) {
+        if (m_target_database->read_dependency_event(buffer)) {
             return DaemonActionCode::CONTINUE;
         }
         return DaemonActionCode::ERROR;
     case MAKE_EVENT_TARGET_PID:
-        if (m_race_search_engine.m_target_database.read_target_pid_event(buffer)) {
+        if (m_target_database->read_target_pid_event(buffer)) {
             return DaemonActionCode::ACKNOWLEDGE;
         }
         return DaemonActionCode::ERROR;
@@ -34,7 +33,7 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
         // died, and new make process have sent GENERAL_EVENT_INIT.
         // Thus, in a case of repeated init event, just reset the connection
         // state.
-        m_race_search_engine.reset();
+        reset();
 
         return DaemonActionCode::ACKNOWLEDGE;
     default:
@@ -45,6 +44,10 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
                                                TracerFileEvent* event,
                                                const std::string& file_path)
 {
+    if (!m_attached_tracer) {
+        return;
+    }
+
     if (event->return_code < 0) {
         return;
     }
@@ -53,8 +56,9 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
         return;
     }
 
-    EntryData* entry_data =
-        m_race_search_engine.m_filename_database.update_file(file_path, event->file_entry);
+    auto& engine = m_attached_tracer->get_race_search_engine();
+
+    EntryData* entry_data = engine.m_filename_database.update_file(file_path, event->file_entry);
 
     if (!entry_data) {
         return;
@@ -64,7 +68,7 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
     pid_t target_pid = event->pid;
 
     while (!target && target_pid) {
-        target = m_race_search_engine.m_target_database.get_target(target_pid);
+        target = m_target_database->get_target(target_pid);
         target_pid = m_attached_tracer->get_ppid(target_pid);
     }
 
@@ -79,12 +83,12 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
     // file at file_path, so it can be used right away.
 
     entry_data->dependency_finder.push_access(record);
-    m_race_search_engine.check_required_dependencies(
+    engine.check_required_dependencies(
         entry_data->last_known_file,
         entry_data->dependency_finder);
 
     entry_data->last_known_file->m_dependency_finder.push_access(record);
-    m_race_search_engine.check_required_dependencies(
+    engine.check_required_dependencies(
         entry_data->last_known_file,
         entry_data->last_known_file->m_dependency_finder);
 }

@@ -61,22 +61,38 @@ PS::Target* PS::TargetDatabase::get_target_for_name(const std::string& name)
 {
     auto it = m_targets_by_names.find(name);
     if (it == m_targets_by_names.end()) {
-        std::unique_ptr<Target> target = std::make_unique<Target>(name);
+        std::unique_ptr<Target> target = std::make_unique<Target>(name, this);
         Target* result = target.get();
         m_targets_by_names[name] = std::move(target);
         return result;
     }
     return it->second.get();
 }
-PS::Target* PS::TargetDatabase::get_target(pid_t pid)
+PS::Target* PS::TargetDatabase::get_target(pid_t pid) const
 {
     auto it = m_target_by_pid_instances.find(pid);
     if (it == m_target_by_pid_instances.end())
         return nullptr;
     return it->second;
 }
-void PS::TargetDatabase::reset()
+
+void PS::TargetDatabase::set_parent_target(PS::Target* parent_target)
 {
-    m_target_by_pid_instances.clear();
-    m_targets_by_names.clear();
+    m_parent_target = parent_target;
+
+    if (m_parent_target) {
+        m_depth = m_parent_target->target_database->get_depth() + 1;
+    } else {
+        m_depth = 0;
+    }
+}
+
+PS::Target* PS::TargetDatabase::get_parent_target()
+{
+    return m_parent_target;
+}
+
+int PS::TargetDatabase::get_depth()
+{
+    return m_depth;
 }
