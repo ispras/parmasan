@@ -11,6 +11,18 @@
 
 #define MAX_MESSAGE_SIZE (PATH_MAX * 4)
 
+static int move_fd_above(int fd, int limit)
+{
+    if (fd > limit || fd < 0) {
+        return fd;
+    }
+
+    int result = move_fd_above(dup(fd), limit);
+    close(fd);
+
+    return result;
+}
+
 int check_read_fd(const fd_set* mask, int readfd, int writefd, char buf[MAX_MESSAGE_SIZE],
                   const char* message)
 {
@@ -41,6 +53,13 @@ int main(int argc, const char** argv)
     int daemon_fd = atoi(getenv("PARMASAN_DAEMON_FD"));
     int socketpair_fds[2];
     socketpair(AF_UNIX, SOCK_SEQPACKET, 0, socketpair_fds);
+
+    // Sometimes GNU configure (and other shell scripts) can override
+    // file descriptors without checking whether it was already taken.
+    // Shell scripts can only use single-digit file descriptors, so
+    // here the exposed file descriptor is moved above 9 to avoid
+    // some possible collisions.
+    socketpair_fds[1] = move_fd_above(socketpair_fds[1], 9);
 
     // Check that fd is valid
     if (fcntl(daemon_fd, F_GETFD) == -1) {

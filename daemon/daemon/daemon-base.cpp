@@ -10,6 +10,18 @@
 #include <sys/fcntl.h>
 #include <sys/signalfd.h>
 
+static int move_fd_above(int fd, int limit)
+{
+    if (fd > limit || fd < 0) {
+        return fd;
+    }
+
+    int result = move_fd_above(dup(fd), limit);
+    close(fd);
+
+    return result;
+}
+
 int DaemonBase::setup()
 {
     int fds[2] = {};
@@ -22,13 +34,20 @@ int DaemonBase::setup()
     m_read_fd = fds[0];
     m_write_fd = fds[1];
 
+    // Sometimes GNU configure (and other shell scripts) can override
+    // file descriptors without checking whether it was already taken.
+    // Shell scripts can only use single-digit file descriptors, so
+    // here the exposed file descriptor is moved above 9 to avoid
+    // some possible collisions
+    m_write_fd = move_fd_above(m_write_fd, 9);
+
     // We don't want fds[0] to be blocking the daemon from reading the signal fd, so make it
     // non-blocking
-    int flags = fcntl(fds[0], F_GETFL);
+    int flags = fcntl(m_read_fd, F_GETFL);
     flags |= O_NONBLOCK;
-    fcntl(fds[0], F_SETFL, flags);
+    fcntl(m_read_fd, F_SETFL, flags);
 
-    return fds[1];
+    return m_write_fd;
 }
 
 bool DaemonBase::setup_signal_blocking()
