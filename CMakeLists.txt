@@ -12,8 +12,8 @@ set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(tracer)
-add_subdirectory(tracer-plug)
+add_subdirectory(tracer-stub)
 add_subdirectory(daemon)
 add_subdirectory(eavesdropper)
 
-install(TARGETS tracer parmasan eavesdropper)
+install(TARGETS tracer tracer-stub parmasan eavesdropper)

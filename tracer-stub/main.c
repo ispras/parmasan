@@ -12,7 +12,7 @@ char buffer[LONG_PATH_MAX];
 int main(int argc, const char** argv)
 {
     if (argc != 2) {
-        printf("Usage: tracer-plug <log file path>\n");
+        printf("Usage: tracer-stub <log file path>\n");
         return EXIT_FAILURE;
     }
 
