@@ -384,12 +384,21 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path)
 
     int retcode = (int)tracee_get_syscall_return_code(process);
 
-    bool is_inode_released = file_stat.st_nlink <= 1;
-    bool is_unlink_successful = retcode == 0;
-
     tracer_report_file_op(self, TRACER_EVENT_UNLINK, process->pid, path, &file_stat, retcode);
 
-    if (is_inode_released && is_unlink_successful) {
+    if (retcode != 0) {
+        return;
+    }
+
+    bool is_inode_released = false;
+
+    if ((file_stat.st_mode & S_IFMT) == S_IFDIR) {
+        is_inode_released = file_stat.st_nlink <= 2;
+    } else {
+        is_inode_released = file_stat.st_nlink <= 1;
+    }
+
+    if (is_inode_released) {
         tracer_report_file_op(self, TRACER_EVENT_INODE_UNLINK, process->pid, path, &file_stat,
                               retcode);
     }
