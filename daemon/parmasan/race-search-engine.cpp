@@ -7,10 +7,13 @@ namespace PS
 
 bool RaceSearchEngine::search_for_dependency(Target* from, Target* to)
 {
+    if (from->last_traverse_num == m_traverse_num)
+        return false;
+
     if (from == to)
         return true;
 
-    // TODO: bfs?
+    from->last_traverse_num = m_traverse_num;
 
     for (auto& dependent : from->dependents) {
         if (search_for_dependency(dependent, to)) {

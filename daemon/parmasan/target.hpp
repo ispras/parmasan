@@ -16,6 +16,7 @@ struct Target {
 
     std::string name;
     std::unordered_set<Target*> dependents;
+    unsigned long long last_traverse_num = 0;
 };
 
 } // namespace PS

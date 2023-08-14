@@ -45,6 +45,7 @@ class RaceSearchEngine
                 continue;
             }
 
+            m_traverse_num++;
             if (!search_for_dependency(dependencies_to_check.left_access->target,
                                        dependencies_to_check.right_access->target)) {
                 report_race(file, *dependencies_to_check.left_access,
@@ -59,6 +60,7 @@ class RaceSearchEngine
                      const AccessRecord& access_b) const;
 
     std::ostream& m_out_stream;
+    unsigned long long m_traverse_num = 0;
 };
 
 } // namespace PS
