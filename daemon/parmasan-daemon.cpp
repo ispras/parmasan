@@ -89,7 +89,7 @@ void PS::ParmasanDaemon::create_make_connection(pid_t pid)
 
     if (tracer) {
         make_data->attach_to_tracer(tracer);
-        tracer->make_process_attached(pid, make_data.get());
+        tracer->assign_make_process(pid, make_data.get());
     } else {
         std::cerr << "Warning: dangling make process pid=" << pid << "\n";
     }

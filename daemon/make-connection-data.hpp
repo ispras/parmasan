@@ -20,36 +20,9 @@ class MakeConnectionData : public DaemonConnectionData
     void handle_file_event(PS::TracerEventType event_type, TracerFileEvent* event,
                            const std::string& file_path);
 
-    void attach_to_tracer(TracerConnectionData* tracer)
-    {
-        m_attached_tracer = tracer;
-        reset();
-    }
+    void attach_to_tracer(TracerConnectionData* tracer);
 
-    void reset()
-    {
-        m_target_database = m_attached_tracer->get_race_search_engine().create_target_database();
-
-        // If this make process is a sub-make, find the parent target
-
-        MakeConnectionData* parent_make = nullptr;
-        pid_t pid = m_attached_tracer->get_ppid(m_pid);
-        while (pid != 0) {
-            auto data = m_attached_tracer->get_pid_data(pid);
-            if (data->make_process) {
-                parent_make = data->make_process;
-                break;
-            }
-            pid = data->ppid;
-        }
-
-        if (!parent_make) {
-            // This is a top-level make
-            return;
-        }
-
-        m_target_database->set_parent_target(parent_make->get_target_database().get_target(m_pid));
-    }
+    void reset();
 
     const TargetDatabase& get_target_database()
     {

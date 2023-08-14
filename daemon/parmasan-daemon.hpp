@@ -9,7 +9,6 @@
 #include "daemon-connection-data.hpp"
 #include "daemon/daemon-base.hpp"
 #include "parmasan/race-search-engine.hpp"
-#include "parmasan/tracer-event-handler.hpp"
 
 namespace PS
 {

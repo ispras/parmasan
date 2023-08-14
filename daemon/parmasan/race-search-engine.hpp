@@ -8,7 +8,6 @@
 #include "file.hpp"
 #include "filename-database.hpp"
 #include "target-database.hpp"
-#include "tracer-event-handler.hpp"
 
 namespace PS
 {

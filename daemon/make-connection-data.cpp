@@ -92,3 +92,26 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
         entry_data->last_known_file,
         entry_data->last_known_file->m_dependency_finder);
 }
+
+void PS::MakeConnectionData::reset()
+{
+    m_target_database = m_attached_tracer->get_race_search_engine().create_target_database();
+
+    // If this make process is a sub-make, find the parent target
+
+    pid_t ppid = m_attached_tracer->get_ppid(m_pid);
+    PS::MakeConnectionData* parent_make = m_attached_tracer->get_make_process_for_pid(ppid);
+
+    if (!parent_make) {
+        // This is a top-level make
+        return;
+    }
+
+    m_target_database->set_parent_target(parent_make->get_target_database().get_target(m_pid));
+}
+
+void PS::MakeConnectionData::attach_to_tracer(PS::TracerConnectionData* tracer)
+{
+    m_attached_tracer = tracer;
+    reset();
+}

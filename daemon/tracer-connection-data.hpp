@@ -1,11 +1,17 @@
 #pragma once
 
 #include "daemon-connection-data.hpp"
+#include "shared/structures.hpp"
 
 namespace PS
 {
 
-class ParmasanDaemon;
+class MakeConnectionData;
+
+struct PIDData {
+    pid_t ppid;
+    MakeConnectionData* make_process;
+};
 
 class TracerConnectionData : public DaemonConnectionData
 {
@@ -17,35 +23,26 @@ class TracerConnectionData : public DaemonConnectionData
 
     DaemonAction handle_packet(const char* buffer) override;
 
-    void make_process_attached(pid_t pid, MakeConnectionData* make_data);
-
-    bool has_child_with_pid(pid_t pid);
-
-    pid_t get_ppid(pid_t pid)
-    {
-        auto data = get_pid_data(pid);
-        if (!data) {
-            return 0;
-        }
-        return data->ppid;
-    }
-
-    const PIDData* get_pid_data(pid_t pid)
-    {
-        auto it = m_tracer_event_handler.m_pid_database.find(pid);
-        if (it == m_tracer_event_handler.m_pid_database.end())
-            return nullptr;
-        return &it->second;
-    }
-
     RaceSearchEngine& get_race_search_engine()
     {
         return m_race_search_engine;
     }
 
+    PS::MakeConnectionData* get_make_process_for_pid(pid_t pid);
+
+    void assign_make_process(pid_t pid, MakeConnectionData* make_process);
+    DaemonAction read_file_event(TracerEventType type, const char* buffer);
+    DaemonAction read_child_event(const char* buffer);
+    DaemonAction read_die_event(const char* buffer);
+
+    const PS::PIDData* get_pid_data(pid_t pid);
+    bool has_child_with_pid(pid_t pid);
+    pid_t get_ppid(pid_t pid);
+
   private:
-    TracerEventHandler m_tracer_event_handler{};
     RaceSearchEngine m_race_search_engine;
+
+    std::unordered_map<pid_t, PIDData> m_pid_database{};
 };
 
 } // namespace PS

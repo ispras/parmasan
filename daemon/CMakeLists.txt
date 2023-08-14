@@ -26,8 +26,6 @@ add_executable(parmasan
         parmasan/target-database.hpp
         parmasan/target.cpp
         parmasan/target.hpp
-        parmasan/tracer-event-handler.cpp
-        parmasan/tracer-event-handler.hpp
         shared/structures.cpp
         shared/structures.hpp
         tracer-connection-data.cpp
