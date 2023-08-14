@@ -22,7 +22,7 @@ class MakeConnectionData : public DaemonConnectionData
 
     void attach_to_tracer(TracerConnectionData* tracer);
 
-    void reset();
+    void turn_into_sibling();
 
     const TargetDatabase& get_target_database()
     {

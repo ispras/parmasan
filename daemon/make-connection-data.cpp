@@ -29,11 +29,17 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
         // the make process just re-executes itself without any kind
         // of shutdown. This means that the init event can be received
         // multiple times from the seemingly same process. The best way
-        // of interpreting this is to pretend that old make process have
-        // died, and new make process have sent GENERAL_EVENT_INIT.
-        // Thus, in a case of repeated init event, just reset the connection
-        // state.
-        reset();
+        // of interpreting this is to pretend that the new make process
+        // is a sub-make process. The only problem is - it's hard to know
+        // what exact target have caused the make to re-execute. However,
+        // it's impossible to have a race between two epochs of the same
+        // makefile. Re-exec is a strong barrier. It's guaranteed that
+        // there is nothing else running as a make child when it happens.
+        // Thus, it should be fine to consider re-executed make as a
+        // sibling, not a child. The parmasan will still be able to find
+        // race conditions between re-executed make and its own parent
+        // make processes.
+        turn_into_sibling();
 
         return DaemonActionCode::ACKNOWLEDGE;
     default:
@@ -93,8 +99,20 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
         entry_data->last_known_file->m_dependency_finder);
 }
 
-void PS::MakeConnectionData::reset()
+void PS::MakeConnectionData::turn_into_sibling()
 {
+    // Turn ourselves into a sub-make of our parent.
+    auto old_target_database = m_target_database;
+    m_target_database = m_attached_tracer->get_race_search_engine().create_target_database();
+
+    if (old_target_database) {
+        m_target_database->set_parent_target(old_target_database->get_parent_target());
+    }
+}
+
+void PS::MakeConnectionData::attach_to_tracer(PS::TracerConnectionData* tracer)
+{
+    m_attached_tracer = tracer;
     m_target_database = m_attached_tracer->get_race_search_engine().create_target_database();
 
     // If this make process is a sub-make, find the parent target
@@ -108,10 +126,4 @@ void PS::MakeConnectionData::reset()
     }
 
     m_target_database->set_parent_target(parent_make->get_target_database().get_target(m_pid));
-}
-
-void PS::MakeConnectionData::attach_to_tracer(PS::TracerConnectionData* tracer)
-{
-    m_attached_tracer = tracer;
-    reset();
 }
