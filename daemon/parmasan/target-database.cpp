@@ -46,7 +46,14 @@ bool PS::TargetDatabase::read_dependency_event(const char* buffer)
         buffer++;
     std::string dependency_name(buffer, str_length);
 
-    get_target_for_name(dependency_name)->dependents.push_back(get_target_for_name(target_name));
+    Target* target = get_target_for_name(target_name);
+    Target* dependency = get_target_for_name(dependency_name);
+
+    auto& dependents = dependency->dependents;
+
+    if (dependents.find(target) == dependents.end()) {
+        dependents.insert(target);
+    }
 
     return true;
 }

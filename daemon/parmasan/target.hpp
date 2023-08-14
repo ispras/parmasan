@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include <unordered_set>
 
 namespace PS
 {
@@ -15,7 +15,7 @@ struct Target {
         : name(std::forward<T>(name)) {}
 
     std::string name;
-    std::vector<Target*> dependents;
+    std::unordered_set<Target*> dependents;
 };
 
 } // namespace PS
