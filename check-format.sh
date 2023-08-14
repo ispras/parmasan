@@ -9,7 +9,7 @@ fi
 # Maximum allowed line length
 max_line_length=100
 
-directories=("daemon" "tracer" "eavesdropper")
+directories=("daemon" "tracer" "eavesdropper" "tracer-plug")
 file_extensions=(".cpp" ".hpp" ".c" ".h")
 files=()
 
