@@ -43,8 +43,8 @@ class RaceSearchEngine
             }
 
             m_traverse_num++;
-            if (!find_common_make_and_dependency(dependencies_to_check.left_access->target,
-                                                 dependencies_to_check.right_access->target)) {
+            if (!find_common_make_and_dependency(*dependencies_to_check.left_access,
+                                                 *dependencies_to_check.right_access)) {
                 report_race(file, *dependencies_to_check.left_access,
                             *dependencies_to_check.right_access);
             }
@@ -58,7 +58,8 @@ class RaceSearchEngine
     }
 
   private:
-    bool find_common_make_and_dependency(Target* from, Target* to);
+    bool find_common_make_and_dependency(const AccessRecord& access_a,
+                                         const AccessRecord& access_b);
     bool search_for_dependency(Target* from, Target* to);
     void report_race(const File* file, const AccessRecord& access_a,
                      const AccessRecord& access_b) const;

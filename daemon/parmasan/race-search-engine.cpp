@@ -5,8 +5,12 @@
 namespace PS
 {
 
-bool RaceSearchEngine::find_common_make_and_dependency(Target* from, Target* to)
+bool RaceSearchEngine::find_common_make_and_dependency(const AccessRecord& access_a,
+                                                       const AccessRecord& access_b)
 {
+    BuildContext a_ctx = access_a.context;
+    BuildContext b_ctx = access_b.context;
+
     // It's not required to call search_for_dependency on the entire target chain, since
     // if two targets are the same level and from the same makefile, they must have the same
     // parent target. So search_for_dependency is only called for the deepest pair of targets
@@ -14,27 +18,26 @@ bool RaceSearchEngine::find_common_make_and_dependency(Target* from, Target* to)
 
     // Balance depths.
 
-    int to_depth = to->target_database->get_depth();
-    while (from->target_database->get_depth() > to_depth) {
-        from = from->target_database->get_parent_target();
-    }
-
-    int from_depth = from->target_database->get_depth();
-    while (from_depth < to->target_database->get_depth()) {
-        to = to->target_database->get_parent_target();
-    }
+    a_ctx.up_to_depth(b_ctx.get_depth());
+    b_ctx.up_to_depth(a_ctx.get_depth());
 
     // Go up the target chain until target databases match.
 
-    while (from && to && from->target_database != to->target_database) {
-        from = from->target_database->get_parent_target();
-        to = to->target_database->get_parent_target();
+    while (a_ctx && b_ctx && a_ctx.target->target_database != b_ctx.target->target_database) {
+        a_ctx = a_ctx.parent();
+        b_ctx = b_ctx.parent();
+    }
+
+    // If these two accesses are from different goals, ignore them.
+    // Make only builds one goal at a time, so it cannot be a race.
+    if (a_ctx.goal != b_ctx.goal) {
+        return true;
     }
 
     // Finally, check if these two targets depend on each other.
 
-    if (from && to) {
-        return search_for_dependency(from, to);
+    if (a_ctx && b_ctx) {
+        return search_for_dependency(a_ctx.target, b_ctx.target);
     }
 
     // This might occur if the root makefile re-executed itself.
@@ -69,9 +72,10 @@ void RaceSearchEngine::report_race(const File* file, const AccessRecord& access_
                                    const AccessRecord& access_b) const
 {
     m_out_stream << "race found at file '" << file->get_path() << "': ";
-    m_out_stream << access_a.access_type << " at target '" << access_a.target->name << "', ";
-    m_out_stream << access_b.access_type << " at target '" << access_b.target->name
-                 << "' are unordered\n";
+    m_out_stream << access_a.access_type << " at target '" << access_a.context.target->name;
+    m_out_stream << "', ";
+    m_out_stream << access_b.access_type << " at target '" << access_b.context.target->name;
+    m_out_stream << "' are unordered\n";
 }
 
 } // namespace PS

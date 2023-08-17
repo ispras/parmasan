@@ -27,6 +27,7 @@ enum TracerEventType : char {
 enum MakeEventType : char {
     MAKE_EVENT_TARGET_PID = 'T',
     MAKE_EVENT_DEPENDENCY = 'D',
+    MAKE_EVENT_GOAL = 'G'
 };
 
 enum MessageAuthorType : char {

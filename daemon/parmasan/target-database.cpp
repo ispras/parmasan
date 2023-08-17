@@ -57,6 +57,21 @@ bool PS::TargetDatabase::read_dependency_event(const char* buffer)
 
     return true;
 }
+bool PS::TargetDatabase::read_goal_event(const char* buffer)
+{
+    size_t str_length = 0;
+    int res = 0;
+
+    if (sscanf(buffer, "%zu %n", &str_length, &res) != 1) {
+        return false;
+    }
+    buffer += res;
+    std::string goal_name(buffer, str_length);
+
+    m_goals.push_back(std::make_unique<MakeGoal>(std::move(goal_name), this));
+
+    return true;
+}
 PS::Target* PS::TargetDatabase::get_target_for_name(const std::string& name)
 {
     auto it = m_targets_by_names.find(name);
@@ -76,23 +91,25 @@ PS::Target* PS::TargetDatabase::get_target(pid_t pid) const
     return it->second;
 }
 
-void PS::TargetDatabase::set_parent_target(PS::Target* parent_target)
+void PS::TargetDatabase::set_parent_context(PS::BuildContext parent_context)
 {
-    m_parent_target = parent_target;
-
-    if (m_parent_target) {
-        m_depth = m_parent_target->target_database->get_depth() + 1;
-    } else {
-        m_depth = 0;
-    }
+    m_parent_context = parent_context;
+    m_depth = parent_context.get_depth() + 1;
 }
 
-PS::Target* PS::TargetDatabase::get_parent_target()
+PS::BuildContext PS::TargetDatabase::get_parent_context() const
 {
-    return m_parent_target;
+    return m_parent_context;
 }
 
-int PS::TargetDatabase::get_depth()
+int PS::TargetDatabase::get_depth() const
 {
     return m_depth;
+}
+PS::MakeGoal* PS::TargetDatabase::get_current_goal() const
+{
+    if (m_goals.empty()) {
+        return nullptr;
+    }
+    return m_goals.back().get();
 }

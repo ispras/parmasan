@@ -33,6 +33,12 @@ add_executable(parmasan
         utils/path-walker.cpp
         utils/path-walker.hpp
         utils/run-shell.cpp
-        utils/run-shell.hpp parmasan/entry-bound-dependency-search.hpp parmasan/path-bound-dependency-search.hpp parmasan/access-record.cpp)
+        utils/run-shell.hpp
+        parmasan/entry-bound-dependency-search.hpp
+        parmasan/path-bound-dependency-search.hpp
+        parmasan/access-record.cpp
+        parmasan/build-context.hpp
+        parmasan/make-goal.hpp
+        parmasan/build-context.cpp)
 
 target_include_directories(parmasan PUBLIC .)

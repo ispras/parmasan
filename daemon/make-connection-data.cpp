@@ -23,6 +23,11 @@ DaemonAction PS::MakeConnectionData::handle_packet(const char* buffer)
             return DaemonActionCode::ACKNOWLEDGE;
         }
         return DaemonActionCode::ERROR;
+    case MAKE_EVENT_GOAL:
+        if (m_target_database->read_goal_event(buffer)) {
+            return DaemonActionCode::ACKNOWLEDGE;
+        }
+        return DaemonActionCode::ERROR;
     case GENERAL_EVENT_INIT:
         // As it turned out, GNU make (and remake) have its own way
         // of handling makefile updates. When a makefile is updated,
@@ -82,7 +87,11 @@ void PS::MakeConnectionData::handle_file_event(PS::TracerEventType event_type,
         return;
     }
 
-    AccessRecord record{.access_type = get_file_operation(event_type), .target = target};
+    AccessRecord record{
+        .access_type = get_file_operation(event_type),
+        .context = {
+            .target = target,
+            .goal = m_target_database->get_current_goal()}};
 
     // Report the access both to the entry-bound and path-bound dependency finder.
     // After update_file call, last_known_file field stores the reference to the
@@ -106,7 +115,7 @@ void PS::MakeConnectionData::turn_into_sibling()
     m_target_database = m_attached_tracer->get_race_search_engine().create_target_database();
 
     if (old_target_database) {
-        m_target_database->set_parent_target(old_target_database->get_parent_target());
+        m_target_database->set_parent_context(old_target_database->get_parent_context());
     }
 }
 
@@ -125,5 +134,8 @@ void PS::MakeConnectionData::attach_to_tracer(PS::TracerConnectionData* tracer)
         return;
     }
 
-    m_target_database->set_parent_target(parent_make->get_target_database().get_target(m_pid));
+    auto& make_process = parent_make->get_target_database();
+
+    m_target_database->set_parent_context({.target = make_process.get_target(m_pid),
+                                           .goal = make_process.get_current_goal()});
 }
