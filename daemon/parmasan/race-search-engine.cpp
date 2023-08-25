@@ -28,12 +28,6 @@ bool RaceSearchEngine::find_common_make_and_dependency(const AccessRecord& acces
         b_ctx = b_ctx.parent();
     }
 
-    // If these two accesses are from different goals, ignore them.
-    // Make only builds one goal at a time, so it cannot be a race.
-    if (a_ctx.goal != b_ctx.goal) {
-        return true;
-    }
-
     // Finally, check if these two targets depend on each other.
 
     if (a_ctx && b_ctx) {
