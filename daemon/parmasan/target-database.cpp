@@ -66,9 +66,18 @@ bool PS::TargetDatabase::read_goal_event(const char* buffer)
         return false;
     }
     buffer += res;
-    std::string goal_name(buffer, str_length);
+    std::string_view goal_name(buffer, str_length);
 
-    m_goals.push_back(std::make_unique<MakeGoal>(std::move(goal_name), this));
+    // Make sure not to store the same goal multiple times. When
+    // the build is parallel, make process might send a sequence of
+    // identical GOAL messages. However, once the new goal is
+    // received, the previous one won't be repeated anymore, since
+    // the goal chain is only iterated forward.
+    if (!m_goals.empty() && m_goals.back()->name == goal_name) {
+        return true;
+    }
+
+    m_goals.push_back(std::make_unique<MakeGoal>(goal_name, this));
 
     return true;
 }
