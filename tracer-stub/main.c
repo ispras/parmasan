@@ -30,8 +30,8 @@ int main(int argc, const char** argv)
         return EXIT_FAILURE;
     }
 
-    int fd = atoi(fd_str);
-    if (fd < 0) {
+    int fd = -1;
+    if (sscanf(fd_str, "%d", &fd) != 1 || fd < 0) {
         fprintf(stderr, "PARMASAN_DAEMON_FD environment variable is invalid\n");
         return EXIT_FAILURE;
     }

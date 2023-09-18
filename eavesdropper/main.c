@@ -23,8 +23,8 @@ static int move_fd_above(int fd, int limit)
     return result;
 }
 
-int check_read_fd(const fd_set* mask, int readfd, int writefd, char buf[MAX_MESSAGE_SIZE],
-                  const char* message)
+int check_read_fd(FILE* output, const fd_set* mask, int readfd, int writefd,
+                  char buf[MAX_MESSAGE_SIZE], const char* message)
 {
     if (!FD_ISSET(readfd, mask))
         return 0;
@@ -39,18 +39,57 @@ int check_read_fd(const fd_set* mask, int readfd, int writefd, char buf[MAX_MESS
         return -1;
     }
 
-    printf("%s: %.*s\n", message, n, buf);
+    if (!output) {
+        output = stdout;
+    }
+
+    fprintf(output, "%s: %.*s\n", message, n, buf);
     write(writefd, buf, n);
     return n;
 }
 
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
+    FILE* output = NULL;
+    int opt = 0;
+    while ((opt = getopt(argc, argv, "+o:")) != -1) {
+        switch (opt) {
+        case 'o':
+            output = fopen(optarg, "w");
+            if (!output) {
+                perror("Could not open the output file");
+                return EXIT_FAILURE;
+            }
+            break;
+        case '?':
+        default:
+            fprintf(stderr, "Usage: %s [-o OUTPUT] [--] COMMAND [ARGS...]\n", argv[0]);
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (optind == argc) {
+        fprintf(stderr, "Please, specify command to eavesdrop\n");
+        return EXIT_FAILURE;
+    }
+
     // Set stdout buffer to NULL to avoid buffering. This is needed to make sure
     // that the output is printed even if tracer or demon hangs.
     setbuf(stdout, NULL);
 
-    int daemon_fd = atoi(getenv("PARMASAN_DAEMON_FD"));
+    // Read environment variable "PARMASAN_DAEMON_FD" to get the socket file descriptor
+    char* daemon_fd_str = getenv("PARMASAN_DAEMON_FD");
+    if (daemon_fd_str == NULL) {
+        fprintf(stderr, "PARMASAN_DAEMON_FD environment variable not set\n");
+        return false;
+    }
+
+    int daemon_fd = -1;
+    if (sscanf(daemon_fd_str, "%d", &daemon_fd) != 1 || daemon_fd < 0) {
+        fprintf(stderr, "PARMASAN_DAEMON_FD environment variable is invalid\n");
+        return false;
+    }
+
     int socketpair_fds[2];
     socketpair(AF_UNIX, SOCK_SEQPACKET, 0, socketpair_fds);
 
@@ -69,10 +108,12 @@ int main(int argc, const char** argv)
 
     if (fork() == 0) {
         // Child process
-        char daemon_fd_str[16] = {};
-        sprintf(daemon_fd_str, "%d", socketpair_fds[1]);
-        setenv("PARMASAN_DAEMON_FD", daemon_fd_str, 1);
-        execvp(argv[1], (char* const*)argv + 1);
+        char patched_daemon_fd_str[16] = {};
+        sprintf(patched_daemon_fd_str, "%d", socketpair_fds[1]);
+        setenv("PARMASAN_DAEMON_FD", patched_daemon_fd_str, 1);
+        execvp(argv[optind], argv + optind);
+        perror("execvp");
+        return EXIT_FAILURE;
     } else {
         // Parent process
 
@@ -80,6 +121,7 @@ int main(int argc, const char** argv)
         sigset_t mask;
         sigemptyset(&mask);
         sigaddset(&mask, SIGCHLD);
+        int child_fd = socketpair_fds[0];
 
         if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
             perror("sigprocmask");
@@ -94,7 +136,7 @@ int main(int argc, const char** argv)
             fd_set read_fds;
             FD_ZERO(&read_fds);
             FD_SET(daemon_fd, &read_fds);
-            FD_SET(socketpair_fds[0], &read_fds);
+            FD_SET(child_fd, &read_fds);
             FD_SET(sigfd, &read_fds);
 
             if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) < 0) {
@@ -102,10 +144,10 @@ int main(int argc, const char** argv)
                 break;
             }
 
-            if (check_read_fd(&read_fds, socketpair_fds[0], daemon_fd, buf, "child -> daemon") < 0)
+            if (check_read_fd(output, &read_fds, child_fd, daemon_fd, buf, "child -> daemon") < 0)
                 break;
 
-            if (check_read_fd(&read_fds, daemon_fd, socketpair_fds[0], buf, "daemon -> child") < 0)
+            if (check_read_fd(output, &read_fds, daemon_fd, child_fd, buf, "daemon -> child") < 0)
                 break;
 
             if (FD_ISSET(sigfd, &read_fds)) {
@@ -122,4 +164,7 @@ int main(int argc, const char** argv)
 
     close(socketpair_fds[0]);
     close(socketpair_fds[1]);
+    if (output) {
+        fclose(output);
+    }
 }

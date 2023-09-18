@@ -99,8 +99,8 @@ bool tracer_connect_to_socket(s_tracer* self)
         return false;
     }
 
-    int fd = atoi(fd_str);
-    if (fd < 0) {
+    int fd = -1;
+    if (sscanf(fd_str, "%d", &fd) != 1 || fd < 0) {
         fprintf(stderr, "PARMASAN_DAEMON_FD environment variable is invalid\n");
         return false;
     }
