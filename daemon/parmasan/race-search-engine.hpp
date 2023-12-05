@@ -7,7 +7,7 @@
 #include "access-record.hpp"
 #include "file.hpp"
 #include "filename-database.hpp"
-#include "target-database.hpp"
+#include "race-search-engine-delegate.hpp"
 
 namespace PS
 {
@@ -15,7 +15,6 @@ namespace PS
 class RaceSearchEngine
 {
   public:
-    std::vector<std::unique_ptr<TargetDatabase>> m_target_databases{};
     FilenameDatabase m_filename_database{};
 
     RaceSearchEngine(RaceSearchEngine&& move) = delete;
@@ -23,14 +22,20 @@ class RaceSearchEngine
     RaceSearchEngine& operator=(RaceSearchEngine&& move_assign) = delete;
     RaceSearchEngine& operator=(const RaceSearchEngine& copy_assign) = delete;
 
-    explicit RaceSearchEngine(std::ostream& out_stream)
-        : m_out_stream(out_stream) {}
+    explicit RaceSearchEngine() = default;
 
     template <typename RequiredDependencyGenerator>
     void check_required_dependencies(File* file,
                                      RequiredDependencyGenerator& dependencies_to_check)
     {
         do {
+            // The delegate check is not moved outside the loop on purpose.
+            // In case no delegate is set, the dependencies_to_check generator
+            // should still be flushed.
+            if (!m_delegate) {
+                continue;
+            }
+
             if (!dependencies_to_check.is_required_dependency()) {
                 continue;
             }
@@ -45,26 +50,24 @@ class RaceSearchEngine
             m_traverse_num++;
             if (!find_common_make_and_dependency(*dependencies_to_check.left_access,
                                                  *dependencies_to_check.right_access)) {
-                report_race(file, *dependencies_to_check.left_access,
-                            *dependencies_to_check.right_access);
+                Race race{
+                    .file = file,
+                    .left_access = *dependencies_to_check.left_access,
+                    .right_access = *dependencies_to_check.right_access,
+                };
+                m_delegate->handle_race(race);
             }
         } while (dependencies_to_check.next());
     }
 
-    TargetDatabase* create_target_database()
-    {
-        m_target_databases.push_back(std::make_unique<TargetDatabase>());
-        return m_target_databases.back().get();
-    }
+    void set_delegate(RaceSearchEngineDelegate* delegate);
 
   private:
     bool find_common_make_and_dependency(const AccessRecord& access_a,
                                          const AccessRecord& access_b);
     bool search_for_dependency(Target* from, Target* to);
-    void report_race(const File* file, const AccessRecord& access_a,
-                     const AccessRecord& access_b) const;
 
-    std::ostream& m_out_stream;
+    RaceSearchEngineDelegate* m_delegate = nullptr;
     unsigned long long m_traverse_num = 0;
 };
 

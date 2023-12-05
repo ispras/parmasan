@@ -1,6 +1,7 @@
 
 #include "race-search-engine.hpp"
 #include "access-iterator.hpp"
+#include "parmasan/target.hpp"
 
 namespace PS
 {
@@ -23,7 +24,7 @@ bool RaceSearchEngine::find_common_make_and_dependency(const AccessRecord& acces
 
     // Go up the target chain until target databases match.
 
-    while (a_ctx && b_ctx && a_ctx.target->target_database != b_ctx.target->target_database) {
+    while (a_ctx && b_ctx && a_ctx.target->make_process != b_ctx.target->make_process) {
         a_ctx = a_ctx.parent();
         b_ctx = b_ctx.parent();
     }
@@ -62,14 +63,9 @@ bool RaceSearchEngine::search_for_dependency(Target* from, Target* to)
     return false;
 }
 
-void RaceSearchEngine::report_race(const File* file, const AccessRecord& access_a,
-                                   const AccessRecord& access_b) const
+void RaceSearchEngine::set_delegate(RaceSearchEngineDelegate* delegate)
 {
-    m_out_stream << "race found at file '" << file->get_path() << "': ";
-    m_out_stream << access_a.access_type << " at target '" << access_a.context.target->name;
-    m_out_stream << "', ";
-    m_out_stream << access_b.access_type << " at target '" << access_b.context.target->name;
-    m_out_stream << "' are unordered\n";
+    m_delegate = delegate;
 }
 
 } // namespace PS

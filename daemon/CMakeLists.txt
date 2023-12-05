@@ -5,8 +5,8 @@ add_executable(parmasan
         daemon/daemon-base.hpp
         daemon/daemon-base.cpp
         main.cpp
-        make-connection-data.cpp
-        make-connection-data.hpp
+        make-process.cpp
+        make-process.hpp
         parmasan-daemon.cpp
         parmasan-daemon.hpp
         parmasan/access-iterator.hpp
@@ -28,8 +28,8 @@ add_executable(parmasan
         parmasan/target.hpp
         shared/structures.cpp
         shared/structures.hpp
-        tracer-connection-data.cpp
-        tracer-connection-data.hpp
+        tracer-process.cpp
+        tracer-process.hpp
         utils/path-walker.cpp
         utils/path-walker.hpp
         utils/run-shell.cpp
@@ -39,6 +39,10 @@ add_executable(parmasan
         parmasan/access-record.cpp
         parmasan/build-context.hpp
         parmasan/make-goal.hpp
-        parmasan/build-context.cpp)
+        parmasan/build-context.cpp
+        parmasan/process.hpp
+        parmasan/process.cpp
+        parmasan/race.hpp
+        parmasan/race-search-engine-delegate.hpp)
 
 target_include_directories(parmasan PUBLIC .)

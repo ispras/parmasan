@@ -1,6 +1,21 @@
 #!/bin/bash
 
-if ! git diff --quiet; then
+fix_flag=false
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    -f | --fix)
+        fix_flag=true
+        ;;
+    *)
+        echo "Usage: $(basename "$0") [-f|--fix]"
+        exit 1
+        ;;
+    esac
+    shift
+done
+
+if ! $fix_flag && ! git diff --quiet; then
     echo >&2 "There are uncommitted changes in the working directory."
     echo >&2 "Please commit or stash them before running this script."
     exit 1
@@ -27,7 +42,7 @@ formatting_errors=0
 
 clang-format -i "${files[@]}"
 
-if ! git diff --quiet; then
+if ! $fix_flag && ! git diff --quiet; then
     echo "The following files are not formatted correctly:"
     git diff --name-only
     git reset --hard HEAD

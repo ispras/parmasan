@@ -81,12 +81,6 @@ bool DaemonBase::setup_signal_fd()
     return true;
 }
 
-void DaemonBase::send_acknowledgement_packet(int fd)
-{
-    char packet[] = "ACK";
-    send(fd, packet, sizeof(packet), 0);
-}
-
 void DaemonBase::handle_connection_data()
 {
     while (true) {
@@ -102,11 +96,7 @@ void DaemonBase::handle_connection_data()
 
         if (packet_length > 0) {
             m_buffer[packet_length] = '\0';
-            DaemonAction action = handle_message();
-
-            if (action.action == DaemonActionCode::ACKNOWLEDGE) {
-                send_acknowledgement_packet(m_read_fd);
-            }
+            handle_message();
         } else {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 return;

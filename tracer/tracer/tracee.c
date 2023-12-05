@@ -42,6 +42,17 @@ bool tracee_stopped_at_fork_or_clone(s_tracee* self)
            sig == (SIGTRAP | (PTRACE_EVENT_CLONE << 8));
 }
 
+bool tracee_stopped_at_exec(s_tracee* self)
+{
+    if (!WIFSTOPPED(self->status)) {
+        return false;
+    }
+
+    int sig = self->status >> 8;
+
+    return sig == (SIGTRAP | (PTRACE_EVENT_EXEC << 8));
+}
+
 bool tracee_exited(s_tracee* self)
 {
     return (self->status >> 8 == (SIGTRAP | (PTRACE_EVENT_EXIT << 8)));

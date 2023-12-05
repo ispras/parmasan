@@ -19,7 +19,7 @@ enum TracerEventType : char {
     TRACER_EVENT_WRITE = 'W',
     TRACER_EVENT_READ_WRITE = 'A',
     TRACER_EVENT_UNLINK = 'U',
-    TRACER_EVENT_INODE_UNLINK = 'I',
+    TRACER_EVENT_TOTAL_UNLINK = 'T',
     TRACER_EVENT_CHILD = 'C',
     TRACER_EVENT_DIE = 'D'
 };

@@ -4,6 +4,6 @@
 namespace PS
 {
 
-AccessRecord AccessRecord::invalid{FileAccessType::read, {}};
+AccessRecord AccessRecord::invalid{FileAccessType::read, {}, nullptr};
 
 }

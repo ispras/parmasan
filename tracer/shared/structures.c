@@ -4,7 +4,7 @@ const char* TRACER_EVENT_CODES[] = {
     "WRITE       ",
     "ACCESS      ", // Read + write
     "UNLINK      ",
-    "INODE_UNLINK",
+    "TOTAL_UNLINK",
     "CHILD       ",
     "DIE         ",
 };

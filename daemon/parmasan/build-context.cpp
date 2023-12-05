@@ -6,7 +6,7 @@
 PS::BuildContext PS::BuildContext::parent() const
 {
     if (target) {
-        return target->target_database->get_parent_context();
+        return target->make_process->get_parent_context();
     }
 
     return {};
@@ -17,7 +17,7 @@ int PS::BuildContext::get_depth() const
     if (!*this) {
         return 0;
     }
-    return target->target_database->get_depth();
+    return target->make_process->get_depth();
 }
 
 void PS::BuildContext::up_to_depth(int target_depth)

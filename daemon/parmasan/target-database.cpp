@@ -1,8 +1,9 @@
 
 #include "target-database.hpp"
-#include "race-search-engine.hpp"
+#include "make-process.hpp"
+#include "target-database.hpp"
 
-bool PS::TargetDatabase::read_target_pid_event(const char* buffer)
+bool PS::MakeProcess::read_target_pid_event(const char* buffer)
 {
 
     size_t len = 0;
@@ -22,11 +23,13 @@ bool PS::TargetDatabase::read_target_pid_event(const char* buffer)
         return false;
     }
 
-    m_target_by_pid_instances[pid] = get_target_for_name(name);
+    ProcessData* process = m_attached_tracer->get_alive_process(pid);
+
+    m_target_by_process[process] = get_target_for_name(name);
 
     return true;
 }
-bool PS::TargetDatabase::read_dependency_event(const char* buffer)
+bool PS::MakeProcess::read_dependency_event(const char* buffer)
 {
     size_t str_length = 0;
     int res = 0;
@@ -57,7 +60,7 @@ bool PS::TargetDatabase::read_dependency_event(const char* buffer)
 
     return true;
 }
-bool PS::TargetDatabase::read_goal_event(const char* buffer)
+bool PS::MakeProcess::read_goal_event(const char* buffer)
 {
     size_t str_length = 0;
     int res = 0;
@@ -81,7 +84,19 @@ bool PS::TargetDatabase::read_goal_event(const char* buffer)
 
     return true;
 }
-PS::Target* PS::TargetDatabase::get_target_for_name(const std::string& name)
+
+PS::Target* PS::MakeProcess::get_target_for_process(PS::ProcessData* process) const
+{
+    while (process) {
+        auto it = m_target_by_process.find(process);
+        if (it != m_target_by_process.end())
+            return it->second;
+        process = process->parent;
+    }
+    return nullptr;
+}
+
+PS::Target* PS::MakeProcess::get_target_for_name(const std::string& name)
 {
     auto it = m_targets_by_names.find(name);
     if (it == m_targets_by_names.end()) {
@@ -92,33 +107,42 @@ PS::Target* PS::TargetDatabase::get_target_for_name(const std::string& name)
     }
     return it->second.get();
 }
-PS::Target* PS::TargetDatabase::get_target(pid_t pid) const
-{
-    auto it = m_target_by_pid_instances.find(pid);
-    if (it == m_target_by_pid_instances.end())
-        return nullptr;
-    return it->second;
-}
 
-void PS::TargetDatabase::set_parent_context(PS::BuildContext parent_context)
+void PS::MakeProcess::set_parent_context(PS::BuildContext parent_context)
 {
     m_parent_context = parent_context;
     m_depth = parent_context.get_depth() + 1;
 }
 
-PS::BuildContext PS::TargetDatabase::get_parent_context() const
+PS::BuildContext PS::MakeProcess::get_parent_context() const
 {
     return m_parent_context;
 }
 
-int PS::TargetDatabase::get_depth() const
+int PS::MakeProcess::get_depth() const
 {
     return m_depth;
 }
-PS::MakeGoal* PS::TargetDatabase::get_current_goal() const
+PS::MakeGoal* PS::MakeProcess::get_current_goal() const
 {
     if (m_goals.empty()) {
         return nullptr;
     }
     return m_goals.back().get();
+}
+
+PS::ProcessData* PS::MakeProcess::get_process_data() const
+{
+    return m_process_data;
+}
+
+void PS::MakeProcess::set_process_data(PS::ProcessData* process_data)
+{
+    m_process_data = process_data;
+}
+
+const std::unordered_map<std::string, std::unique_ptr<PS::Target>>&
+PS::MakeProcess::get_targets_by_names() const
+{
+    return m_targets_by_names;
 }

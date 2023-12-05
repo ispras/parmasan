@@ -10,12 +10,18 @@ typedef struct entry {
     ino_t inode;  /* File serial number */
 } s_entry;
 
+typedef enum parmasan_interactive_mode {
+    PARMASAN_INTERACTIVE_NONE = 'N',
+    PARMASAN_INTERACTIVE_FAST = 'F',
+    PARMASAN_INTERACTIVE_SYNC = 'S'
+} e_parmasan_interactive_mode;
+
 typedef enum tracer_event_type {
     TRACER_EVENT_READ = 0,
     TRACER_EVENT_WRITE = 1,
     TRACER_EVENT_READ_WRITE = 2,
     TRACER_EVENT_UNLINK = 3,
-    TRACER_EVENT_INODE_UNLINK = 4,
+    TRACER_EVENT_TOTAL_UNLINK = 4,
     TRACER_EVENT_CHILD = 5,
     TRACER_EVENT_DIE = 6
 } e_tracer_event_type;

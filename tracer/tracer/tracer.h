@@ -20,6 +20,7 @@ typedef struct tracer {
     pid_t child_pid;
     bool bpf_enabled;
     s_pidset stopped_pids;
+    e_parmasan_interactive_mode parmasan_interactive_mode;
 } s_tracer;
 
 // The entry point of the tracer. This function starts a socket connection on SOCKET_PATH and
@@ -48,7 +49,9 @@ void tracer_report_read_write_for_flags(s_tracer* self, s_tracee* process, int f
                                         unsigned long long flags, const char* pathname, int dirfd);
 void tracer_handle_syscall(s_tracer* self, s_tracee* process);
 
-void tracer_handle_fork_clone(s_tracer* self, s_tracee* process);
+void tracer_handle_fork_or_clone(s_tracer* self, s_tracee* process);
+
+void tracer_handle_exec(s_tracer* self, s_tracee* process);
 
 /* MARK: Socket methods */
 
@@ -61,8 +64,9 @@ bool tracer_connect_to_socket(s_tracer* self);
 void tracer_report_file_op(s_tracer* self, e_tracer_event_type event, pid_t pid, const char* path,
                            struct stat* stat, int retcode);
 
-// Reports the child process CHILD forked from PARENT.
-void tracer_report_child(s_tracer* self, pid_t parent, pid_t child);
+// Reports the child process CHILD forked from PARENT with given CMDLINE
+void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child, size_t cmdlen,
+                                      const char* cmdline);
 
 // Informs the daemon that the process with PID is about to exit. This must
 // be the last event received from the given PID. PID 0 refers to the tracer
@@ -70,12 +74,15 @@ void tracer_report_child(s_tracer* self, pid_t parent, pid_t child);
 void tracer_report_die(s_tracer* self, pid_t pid);
 
 // Informs the daemon that the file on PATH was deleted. If the file does not have any
-// hardlinks, the INODE_UNLINK event is also reported.
+// hardlinks, the TOTAL_UNLINK event is also reported.
 void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path);
 
 // Waits for an acknowledgement message from the daemon. Returns 0 on success, or -1 if message is
 // malformed.
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self);
+
+// Waits for MODE message from the daemon. Returns 0 on success, or -1 if message is malformed.
+int tracer_wait_for_parmasan_mode(s_tracer* self);
 
 /* MARK: Utilities */
 

@@ -43,7 +43,9 @@ int check_read_fd(FILE* output, const fd_set* mask, int readfd, int writefd,
         output = stdout;
     }
 
-    fprintf(output, "%s: %.*s\n", message, n, buf);
+    fprintf(output, "%s: %10u ", message, n);
+    fwrite(buf, 1, n, output);
+    fprintf(output, "\n");
     write(writefd, buf, n);
     return n;
 }

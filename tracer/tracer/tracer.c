@@ -52,15 +52,39 @@ void tracer_report_file_op(s_tracer* self, e_tracer_event_type type, pid_t pid, 
         retcode);
 
     send(self->socket_fd, socket_buffer, len, 0);
+
+    if (self->parmasan_interactive_mode == PARMASAN_INTERACTIVE_SYNC) {
+        tracer_wait_for_parmasan_acknowledgement(self);
+    }
 }
 
-void tracer_report_child(s_tracer* self, pid_t parent, pid_t child)
+void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child, size_t cmdlen,
+                                      const char* cmdline)
 {
     e_tracer_event_type type = TRACER_EVENT_CHILD;
     s_tracer_child_event event = {.pid = child, .ppid = parent};
 
-    int len = snprintf(socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %d %d",
-                       getpid(), TRACER_EVENT_CODES[type], event.pid, event.ppid);
+    if (!cmdline) {
+        cmdlen = 0;
+        cmdline = "";
+    }
+
+    bool crop = cmdlen > PATH_MAX;
+
+    if (crop) {
+        cmdlen = PATH_MAX;
+    }
+
+    int len = snprintf(socket_buffer, sizeof(socket_buffer),
+                       TRACER_MESSAGE_PREFIX "%s %d %d %d ",
+                       getpid(), TRACER_EVENT_CODES[type], event.pid, event.ppid, cmdlen);
+    memcpy(socket_buffer + len, cmdline, cmdlen);
+
+    if (crop) {
+        socket_buffer[len + cmdlen - 1] = '\0';
+    }
+
+    len += cmdlen;
 
     send(self->socket_fd, socket_buffer, len, 0);
 
@@ -76,18 +100,42 @@ void tracer_report_die(s_tracer* self, pid_t pid)
     send(self->socket_fd, socket_buffer, len, 0);
 }
 
+int tracer_wait_for_parmasan_mode(s_tracer* self)
+{
+    char buffer[16] = {};
+
+    ssize_t length = read(self->socket_fd, buffer, sizeof(buffer));
+    if (length < 0)
+        return -1;
+
+    char mode = PARMASAN_INTERACTIVE_NONE;
+
+    if (sscanf(buffer, "MODE %c", &mode) == 1) {
+        switch (mode) {
+        case PARMASAN_INTERACTIVE_NONE:
+        case PARMASAN_INTERACTIVE_FAST:
+        case PARMASAN_INTERACTIVE_SYNC:
+            self->parmasan_interactive_mode = (e_parmasan_interactive_mode)mode;
+            return 0;
+        default:
+            break;
+        }
+    }
+    return -1;
+}
+
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self)
 {
     char buffer[8] = {};
 
-    while (1) {
-        ssize_t length = read(self->socket_fd, buffer, sizeof(buffer));
-        if (length < 0)
-            return -1;
+    ssize_t length = read(self->socket_fd, buffer, sizeof(buffer));
+    if (length < 0)
+        return -1;
 
-        if (strcmp(buffer, "ACK") == 0)
-            return 0;
-    }
+    if (strcmp(buffer, "ACK") == 0)
+        return 0;
+
+    return -1;
 }
 
 bool tracer_connect_to_socket(s_tracer* self)
@@ -112,9 +160,72 @@ bool tracer_connect_to_socket(s_tracer* self)
 
     send(self->socket_fd, socket_buffer, len, 0);
 
-    tracer_wait_for_parmasan_acknowledgement(self);
+    if (tracer_wait_for_parmasan_mode(self) < 0) {
+        fprintf(stderr, "Failed to get parmasan mode");
+        return false;
+    }
 
     return true;
+}
+
+static char* get_cmdline(pid_t pid, size_t* len)
+{
+    char fd_path[64] = {0};
+    sprintf(fd_path, "/proc/%d/cmdline", pid);
+
+    FILE* file = fopen(fd_path, "r");
+
+    if (!file) {
+        perror("get_cmdline");
+        goto err_early;
+    }
+
+    size_t buffer_size = 0;
+    char* buffer = NULL;
+    char tmp_buffer[256] = {};
+    FILE* memstream = open_memstream(&buffer, &buffer_size);
+
+    while (true) {
+        size_t bytes_read = fread(tmp_buffer, 1, sizeof(tmp_buffer), file);
+
+        if (bytes_read <= 0) {
+            if (feof(file)) {
+                break;
+            } else if (ferror(file)) {
+                perror("fread");
+                goto err;
+            }
+        }
+
+        if (fwrite(tmp_buffer, 1, bytes_read, memstream) < 0) {
+            perror("fwrite");
+            goto err;
+        }
+    }
+
+    fputc(0, memstream);
+    fclose(memstream);
+    fclose(file);
+
+    *len = buffer_size;
+    return buffer;
+
+err:
+    free(buffer);
+    fclose(memstream);
+    fclose(file);
+
+err_early:
+    *len = SIZE_MAX;
+    return NULL;
+}
+
+static void tracer_report_child(s_tracer* self, pid_t parent, pid_t child)
+{
+    size_t cmdlen = SIZE_MAX;
+    char* cmdline = get_cmdline(child, &cmdlen);
+    tracer_report_child_with_cmdline(self, parent, child, cmdlen, cmdline);
+    free(cmdline);
 }
 
 void tracer_parent_task(s_tracer* self)
@@ -169,7 +280,9 @@ void tracer_bpf_loop(s_tracer* self)
         } else if (tracee_exited(&process)) {
             tracer_report_die(self, process.pid);
         } else if (tracee_stopped_at_fork_or_clone(&process)) {
-            tracer_handle_fork_clone(self, &process);
+            tracer_handle_fork_or_clone(self, &process);
+        } else if (tracee_stopped_at_exec(&process)) {
+            tracer_handle_exec(self, &process);
         }
 
         tracee_ptrace_continue(&process);
@@ -201,7 +314,9 @@ void tracer_ptrace_loop(s_tracer* self)
         } else if (tracee_exited(&process)) {
             tracer_report_die(self, process.pid);
         } else if (tracee_stopped_at_fork_or_clone(&process)) {
-            tracer_handle_fork_clone(self, &process);
+            tracer_handle_fork_or_clone(self, &process);
+        } else if (tracee_stopped_at_exec(&process)) {
+            tracer_handle_exec(self, &process);
         }
 
         tracee_ptrace_continue_to_syscall(&process);
@@ -399,7 +514,7 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path)
     }
 
     if (is_inode_released) {
-        tracer_report_file_op(self, TRACER_EVENT_INODE_UNLINK, process->pid, path, &file_stat,
+        tracer_report_file_op(self, TRACER_EVENT_TOTAL_UNLINK, process->pid, path, &file_stat,
                               retcode);
     }
 }
@@ -580,10 +695,9 @@ void tracer_handle_syscall(s_tracer* self, s_tracee* process)
     }
 }
 
-void tracer_handle_fork_clone(s_tracer* self, s_tracee* process)
+void tracer_handle_fork_or_clone(s_tracer* self, s_tracee* process)
 {
     pid_t forked_pid = (pid_t)(tracee_ptrace_get_event_message(process));
-    tracer_report_child(self, process->pid, forked_pid);
 
     // Check if this pid was stopped with PTRACE_EVENT_STOP event.
     bool is_waiting = pidset_contains(&self->stopped_pids, forked_pid);
@@ -598,9 +712,25 @@ void tracer_handle_fork_clone(s_tracer* self, s_tracee* process)
         pidset_remove(&self->stopped_pids, forked_pid);
     }
 
+    tracer_report_child(self, process->pid, forked_pid);
+
     // Here the child is stopped at its first instruction.
     // Allow the child to continue its execution.
     ptrace(PTRACE_CONT, forked_pid, NULL, NULL);
+}
+
+void tracer_handle_exec(s_tracer* self, s_tracee* process)
+{
+    // When the traced executable performs an exec, the tracer sends
+    // a repeated `child` message for this process with new cmdline.
+    // This allows for parmasan to have the correct argv for
+    // processes created with fork/exec.
+
+    tracer_report_child(self, process->pid, process->pid);
+
+    // Here the child is stopped at its first instruction.
+    // Allow the child to continue its execution.
+    ptrace(PTRACE_CONT, process->pid, NULL, NULL);
 }
 
 /* MARK: Utilities */
