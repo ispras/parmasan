@@ -39,7 +39,11 @@ class MakeProcess
 
     const std::unordered_map<std::string, std::unique_ptr<Target>>& get_targets_by_names() const;
 
+    bool search_for_dependency(Target* from, Target* to);
+
   private:
+    bool search_for_dependency_rec(Target* from, Target* to);
+
     std::unordered_map<std::string, std::unique_ptr<Target>> m_targets_by_names;
     std::unordered_map<ProcessData*, Target*> m_target_by_process;
 
@@ -48,6 +52,7 @@ class MakeProcess
     int m_depth = 0;
     std::vector<std::unique_ptr<MakeGoal>> m_goals;
     ProcessData* m_process_data;
+    unsigned long long m_traverse_num = 0;
 };
 
 } // namespace PS

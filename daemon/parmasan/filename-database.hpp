@@ -9,7 +9,6 @@
 namespace PS
 {
 
-class RaceSearchEngine;
 class FilenameDatabase
 {
   public:

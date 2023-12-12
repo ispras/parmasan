@@ -1,14 +1,14 @@
 #pragma once
 
 #include <list>
-#include "entry-bound-dependency-search.hpp"
+#include "dependency-finder.hpp"
 #include "file.hpp"
 
 namespace PS
 {
 
 struct EntryData {
-    EntryBoundDependencySearch::DependencyFinder dependency_finder;
+    EntryBoundDependencyFinder dependency_finder;
     File* last_known_file;
 };
 

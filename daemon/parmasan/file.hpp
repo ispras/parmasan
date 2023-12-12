@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "path-bound-dependency-search.hpp"
+#include "dependency-finder.hpp"
 
 namespace PS
 {
@@ -15,7 +15,9 @@ class File
     std::string m_name;
     std::unordered_map<std::string, std::unique_ptr<File>> m_children{};
     File* m_parent = nullptr;
-    PathBoundDependencySearch::DependencyFinder m_dependency_finder;
+
+    PathBoundDependencyFinder m_path_bound_dependency_finder;
+    DirLookupDependencyFinder m_dir_lookup_dependency_finder;
 
     File(File&& move) = delete;
     File(const File& copy) = delete;

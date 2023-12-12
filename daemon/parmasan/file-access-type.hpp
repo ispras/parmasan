@@ -8,6 +8,7 @@ enum class FileAccessType {
     read_write,
     unlink,
     inode_unlink,
+    dir_lookup
 };
 }
 
@@ -31,6 +32,9 @@ Stream& operator<<(Stream& stream, PS::FileAccessType type)
         break;
     case PS::FileAccessType::inode_unlink:
         stream << "complete inode unlink";
+        break;
+    case PS::FileAccessType::dir_lookup:
+        stream << "directory access";
         break;
     }
 

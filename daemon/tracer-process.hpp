@@ -1,6 +1,8 @@
 #pragma once
 
 #include "daemon-connection-data.hpp"
+#include "parmasan/entry-history.hpp"
+#include "parmasan/filename-database.hpp"
 #include "parmasan/process.hpp"
 #include "parmasan/race.hpp"
 #include "parmasan/target-database.hpp"
@@ -17,17 +19,12 @@ class TracerProcessDelegate
                                const PS::File& file) = 0;
 };
 
-class TracerProcess : public DaemonConnectionData, public RaceSearchEngineDelegate
+class TracerProcess : public DaemonConnectionData
 {
   public:
     explicit TracerProcess(pid_t pid);
 
     DaemonAction handle_packet(const char* buffer) override;
-
-    RaceSearchEngine& get_race_search_engine()
-    {
-        return m_race_search_engine;
-    }
 
     void assign_make_process(pid_t pid, MakeProcess* make_process);
     DaemonAction read_file_event(TracerEventType type, const char* buffer);
@@ -55,17 +52,16 @@ class TracerProcess : public DaemonConnectionData, public RaceSearchEngineDelega
 
     void kill();
 
-  private:
-    void handle_race(const PS::Race& race) override;
-    void handle_access(const PS::AccessRecord& access, const PS::File& file) override;
+    void add_access_to_file(EntryData* entry_data, AccessRecord access);
+    void check_required_dependencies(File* file, IDependencyFinder& dependency_finder);
 
     TracerProcessDelegate* m_delegate = nullptr;
-    RaceSearchEngine m_race_search_engine;
     std::vector<std::unique_ptr<MakeProcess>> m_make_processes{};
 
     pid_t m_pid;
     std::unordered_map<pid_t, unsigned int> m_pid_epochs{};
     std::unordered_map<PidEpoch, std::unique_ptr<ProcessData>> m_pid_database{};
+    FilenameDatabase m_filename_database{};
     bool m_killed = false;
 };
 

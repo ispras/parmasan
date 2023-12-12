@@ -9,7 +9,6 @@ add_executable(parmasan
         make-process.hpp
         parmasan-daemon.cpp
         parmasan-daemon.hpp
-        parmasan/access-iterator.hpp
         parmasan/access-record.hpp
         parmasan/entry-history.cpp
         parmasan/entry-history.hpp
@@ -19,9 +18,7 @@ add_executable(parmasan
         parmasan/file.hpp
         parmasan/filename-database.cpp
         parmasan/filename-database.hpp
-        parmasan/race-search-engine.cpp
-        parmasan/race-search-engine.hpp
-        parmasan/required-dependency-finder.hpp
+        parmasan/dependency-finder.hpp
         parmasan/target-database.cpp
         parmasan/target-database.hpp
         parmasan/target.cpp
@@ -34,8 +31,6 @@ add_executable(parmasan
         utils/path-walker.hpp
         utils/run-shell.cpp
         utils/run-shell.hpp
-        parmasan/entry-bound-dependency-search.hpp
-        parmasan/path-bound-dependency-search.hpp
         parmasan/access-record.cpp
         parmasan/build-context.hpp
         parmasan/make-goal.hpp
@@ -43,6 +38,6 @@ add_executable(parmasan
         parmasan/process.hpp
         parmasan/process.cpp
         parmasan/race.hpp
-        parmasan/race-search-engine-delegate.hpp)
+        parmasan/dependency-finder.cpp)
 
 target_include_directories(parmasan PUBLIC .)

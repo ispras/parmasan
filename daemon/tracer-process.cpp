@@ -6,7 +6,7 @@
 #include "shared/structures.hpp"
 
 PS::TracerProcess::TracerProcess(pid_t pid)
-    : DaemonConnectionData(), m_race_search_engine(), m_pid(pid)
+    : DaemonConnectionData(), m_pid(pid)
 {
     auto self_process = std::make_unique<ProcessData>();
     self_process->id.pid = pid;
@@ -15,8 +15,6 @@ PS::TracerProcess::TracerProcess(pid_t pid)
 
     m_pid_epochs[m_pid] = 0;
     m_pid_database[{m_pid, 0}] = std::move(self_process);
-
-    m_race_search_engine.set_delegate(this);
 }
 
 DaemonAction PS::TracerProcess::handle_packet(const char* buffer)
@@ -73,13 +71,13 @@ DaemonAction PS::TracerProcess::read_file_event(TracerEventType type, const char
         return DaemonActionCode::ERROR;
     }
 
-    if (return_code < 0 || file_entry.inode == 0) {
+    if (file_entry.inode == 0) {
         return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
     }
-    auto process = get_alive_process(pid);
-    auto& engine = get_race_search_engine();
 
-    EntryData* entry_data = engine.m_filename_database.update_file(file_path, file_entry);
+    auto process = get_alive_process(pid);
+
+    EntryData* entry_data = m_filename_database.update_file(file_path, file_entry);
 
     if (!entry_data) {
         return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
@@ -94,27 +92,69 @@ DaemonAction PS::TracerProcess::read_file_event(TracerEventType type, const char
     AccessRecord record{
         .access_type = get_file_operation(type),
         .context = context,
-        .process = process};
+        .process = process,
+        .return_code = return_code};
+
+    add_access_to_file(entry_data, record);
+
+    return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+}
+
+void PS::TracerProcess::add_access_to_file(EntryData* entry_data, AccessRecord access)
+{
 
     if (m_delegate) {
-        m_delegate->handle_access(this, record, *entry_data->last_known_file);
+        m_delegate->handle_access(this, access, *entry_data->last_known_file);
     }
 
     // Report the access both to the entry-bound and path-bound dependency finder.
     // After update_file call, last_known_file field stores the reference to the
     // file at file_path, so it can be used right away.
 
-    entry_data->dependency_finder.push_access(record);
-    engine.check_required_dependencies(
-        entry_data->last_known_file,
-        entry_data->dependency_finder);
+    auto last_known_file = entry_data->last_known_file;
 
-    entry_data->last_known_file->m_dependency_finder.push_access(record);
-    engine.check_required_dependencies(
-        entry_data->last_known_file,
-        entry_data->last_known_file->m_dependency_finder);
+    entry_data->dependency_finder.push_access(access);
+    check_required_dependencies(last_known_file, entry_data->dependency_finder);
 
-    return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+    last_known_file->m_path_bound_dependency_finder.push_access(access);
+    check_required_dependencies(last_known_file, last_known_file->m_path_bound_dependency_finder);
+
+    last_known_file->m_dir_lookup_dependency_finder.push_access(access);
+    check_required_dependencies(last_known_file, last_known_file->m_dir_lookup_dependency_finder);
+
+    // If there is a parent directory, make sure to add a 'dir_lookup' access record
+    // to it as well.
+
+    auto parent = last_known_file->m_parent;
+
+    if (parent) {
+        access.access_type = FileAccessType::dir_lookup;
+        if (m_delegate) {
+            m_delegate->handle_access(this, access, *parent);
+        }
+
+        parent->m_dir_lookup_dependency_finder.push_access(access);
+        check_required_dependencies(parent, parent->m_dir_lookup_dependency_finder);
+    }
+}
+
+void PS::TracerProcess::check_required_dependencies(File* file,
+                                                    IDependencyFinder& dependency_finder)
+{
+    do {
+        if (!m_delegate) {
+            continue;
+        }
+
+        if (dependency_finder.is_required_dependency()) {
+            Race race{
+                .file = file,
+                .left_access = dependency_finder.get_left_access(),
+                .right_access = dependency_finder.get_right_access(),
+            };
+            m_delegate->handle_race(this, race);
+        }
+    } while (dependency_finder.next());
 }
 
 PS::BuildContext PS::TracerProcess::get_context_for_process(PS::ProcessData* process)
@@ -278,20 +318,6 @@ PS::MakeProcess* PS::TracerProcess::create_make_process()
 void PS::TracerProcess::set_delegate(PS::TracerProcessDelegate* delegate)
 {
     m_delegate = delegate;
-}
-
-void PS::TracerProcess::handle_race(const PS::Race& race)
-{
-    if (m_delegate) {
-        m_delegate->handle_race(this, race);
-    }
-}
-
-void PS::TracerProcess::handle_access(const PS::AccessRecord& access, const PS::File& file)
-{
-    if (m_delegate) {
-        m_delegate->handle_access(this, access, file);
-    }
 }
 
 pid_t PS::TracerProcess::get_pid()

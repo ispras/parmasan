@@ -19,6 +19,24 @@ struct BuildContext {
     {
         return target != nullptr;
     }
+
+    bool operator==(const BuildContext& other) const
+    {
+        return target == other.target && goal == other.goal;
+    }
 };
 
 } // namespace PS
+
+namespace std
+{
+
+template <>
+struct hash<PS::BuildContext> {
+    std::size_t operator()(const PS::BuildContext& key) const
+    {
+        return (std::hash<PS::Target*>()(key.target) ^ (hash<PS::MakeGoal*>()(key.goal) << 5));
+    }
+};
+
+} // namespace std

@@ -146,3 +146,28 @@ PS::MakeProcess::get_targets_by_names() const
 {
     return m_targets_by_names;
 }
+
+bool PS::MakeProcess::search_for_dependency(Target* from, Target* to)
+{
+    m_traverse_num++;
+    return search_for_dependency_rec(from, to);
+}
+
+bool PS::MakeProcess::search_for_dependency_rec(Target* from, Target* to)
+{
+    if (from->last_traverse_num == m_traverse_num)
+        return false;
+
+    if (from == to)
+        return true;
+
+    from->last_traverse_num = m_traverse_num;
+
+    for (auto& dependent : from->dependents) {
+        if (search_for_dependency_rec(dependent, to)) {
+            return true;
+        }
+    }
+
+    return false;
+}

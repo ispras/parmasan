@@ -8,7 +8,6 @@
 #include <unordered_set>
 #include "daemon-connection-data.hpp"
 #include "daemon/daemon-base.hpp"
-#include "parmasan/race-search-engine.hpp"
 #include "tracer-process.hpp"
 
 namespace PS
