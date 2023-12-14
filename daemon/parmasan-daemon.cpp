@@ -1,5 +1,6 @@
 
 #include "parmasan-daemon.hpp"
+#include <csignal>
 #include <sys/socket.h>
 #include "make-process.hpp"
 #include "tracer-process.hpp"
@@ -207,4 +208,20 @@ void PS::ParmasanDaemon::handle_access(PS::TracerProcess* tracer, const PS::Acce
 void PS::ParmasanDaemon::set_delegate(PS::ParmasanDaemonDelegate* delegate)
 {
     m_delegate = delegate;
+}
+
+void PS::ParmasanDaemon::suspend_last_process()
+{
+    if (m_last_message_pid == 0)
+        return;
+
+    kill(m_last_message_pid, SIGSTOP);
+}
+
+void PS::ParmasanDaemon::resume_last_process()
+{
+    if (m_last_message_pid == 0)
+        return;
+
+    kill(m_last_message_pid, SIGCONT);
 }

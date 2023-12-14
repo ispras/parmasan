@@ -38,6 +38,12 @@ add_executable(parmasan
         parmasan/process.hpp
         parmasan/process.cpp
         parmasan/race.hpp
-        parmasan/dependency-finder.cpp)
+        parmasan/dependency-finder.cpp
+        interface/parmasan-interface.cpp
+        interface/parmasan-interface.hpp
+        interface/globs.cpp
+        interface/globs.hpp
+        interface/helpers.cpp
+        interface/helpers.hpp)
 
 target_include_directories(parmasan PUBLIC .)

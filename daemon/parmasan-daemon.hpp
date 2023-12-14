@@ -45,6 +45,10 @@ class ParmasanDaemon : public DaemonBase, public TracerProcessDelegate
 
     void set_delegate(ParmasanDaemonDelegate* delegate);
 
+    void suspend_last_process();
+
+    void resume_last_process();
+
   private:
     void handle_message() override;
 
