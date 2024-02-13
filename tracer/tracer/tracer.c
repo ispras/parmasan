@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include <linux/audit.h>
 #include <linux/filter.h>
@@ -17,15 +18,19 @@
 #include "renameat2.h"
 #include "tracee.h"
 
+#define PARMASAN_SYNC "SYNC  "
+#define PARMASAN_ASYNC "ASYNC "
 #define LONG_PATH_MAX (PATH_MAX * 4)
-static char socket_buffer[LONG_PATH_MAX] = {0};
 
-#define TRACER_MESSAGE_PREFIX "TRACER %7d "
+static char socket_buffer[LONG_PATH_MAX] = {0};
+char* message_buffer = socket_buffer + sizeof(PARMASAN_SYNC) - 1;
+#define PARMASAN_MAX_MSG_LEN (sizeof(socket_buffer) - sizeof(PARMASAN_SYNC) + 1)
 
 void tracer_trace(char* argv[])
 {
     s_tracer tracer = {0};
 
+    tracer_construct(&tracer);
     tracer.bpf_enabled = seccomp_available();
 #ifdef DEBUG
     printf("Seccomp availability: %s\n", m_bpf_enabled ? "available" : "unavailable");
@@ -40,6 +45,41 @@ void tracer_trace(char* argv[])
         tracer_parent_task(&tracer);
     } else {
         tracer_child_task(&tracer, argv);
+        return;
+    }
+
+    tracer_destroy(&tracer);
+}
+
+void tracer_construct(s_tracer* self)
+{
+    self->socket_fd = -1;
+}
+
+void tracer_destroy(s_tracer* self)
+{
+    if (self->socket_fd >= 0) {
+        close(self->socket_fd);
+        self->socket_fd = -1;
+    }
+}
+
+void tracer_send_message(s_tracer* self, int len, bool sync)
+{
+    if (self->parmasan_interactive_mode == PARMASAN_INTERACTIVE_SYNC) {
+        sync = true;
+    }
+
+    if (sync) {
+        memcpy(socket_buffer, PARMASAN_SYNC, sizeof(PARMASAN_SYNC) - 1);
+    } else {
+        memcpy(socket_buffer, PARMASAN_ASYNC, sizeof(PARMASAN_ASYNC) - 1);
+    }
+
+    send(self->socket_fd, socket_buffer, len + sizeof(PARMASAN_SYNC) - 1, 0);
+
+    if (sync) {
+        tracer_wait_for_parmasan_acknowledgement(self);
     }
 }
 
@@ -47,15 +87,11 @@ void tracer_report_file_op(s_tracer* self, e_tracer_event_type type, pid_t pid, 
                            struct stat* stat, int retcode)
 {
     int len = snprintf(
-        socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %lu %s %d %lu %lu %d",
-        getpid(), TRACER_EVENT_CODES[type], strlen(path), path, pid, stat->st_dev, stat->st_ino,
+        message_buffer, PARMASAN_MAX_MSG_LEN, "%s %lu %s %d %lu %lu %d",
+        TRACER_EVENT_CODES[type], strlen(path), path, pid, stat->st_dev, stat->st_ino,
         retcode);
 
-    send(self->socket_fd, socket_buffer, len, 0);
-
-    if (self->parmasan_interactive_mode == PARMASAN_INTERACTIVE_SYNC) {
-        tracer_wait_for_parmasan_acknowledgement(self);
-    }
+    tracer_send_message(self, len, false);
 }
 
 void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child, size_t cmdlen,
@@ -75,52 +111,50 @@ void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child,
         cmdlen = PATH_MAX;
     }
 
-    int len = snprintf(socket_buffer, sizeof(socket_buffer),
-                       TRACER_MESSAGE_PREFIX "%s %d %d %d ",
-                       getpid(), TRACER_EVENT_CODES[type], event.pid, event.ppid, cmdlen);
-    memcpy(socket_buffer + len, cmdline, cmdlen);
+    int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "%s %d %d %d ",
+                       TRACER_EVENT_CODES[type], event.pid, event.ppid, cmdlen);
+    memcpy(message_buffer + len, cmdline, cmdlen);
 
     if (crop) {
-        socket_buffer[len + cmdlen - 1] = '\0';
+        message_buffer[len + cmdlen - 1] = '\0';
     }
 
     len += cmdlen;
 
-    send(self->socket_fd, socket_buffer, len, 0);
-
-    tracer_wait_for_parmasan_acknowledgement(self);
+    tracer_send_message(self, len, true);
 }
 
 void tracer_report_die(s_tracer* self, pid_t pid)
 {
     e_tracer_event_type event = TRACER_EVENT_DIE;
 
-    int len = snprintf(socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "%s %d",
-                       getpid(), TRACER_EVENT_CODES[event], pid);
-    send(self->socket_fd, socket_buffer, len, 0);
+    int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "%s %d",
+                       TRACER_EVENT_CODES[event], pid);
+    tracer_send_message(self, len, false);
 }
 
-int tracer_wait_for_parmasan_mode(s_tracer* self)
+int tracer_set_sync_mode(s_tracer* self)
 {
-    char buffer[16] = {};
+    const char* parmasan_mode = getenv("PARMASAN_SYNC_MODE");
 
-    ssize_t length = read(self->socket_fd, buffer, sizeof(buffer));
-    if (length < 0)
+    if (parmasan_mode == NULL) {
+        fprintf(stderr, "PARMASAN_SYNC_MODE environment variable not set\n");
         return -1;
+    }
 
     char mode = PARMASAN_INTERACTIVE_NONE;
 
-    if (sscanf(buffer, "MODE %c", &mode) == 1) {
-        switch (mode) {
-        case PARMASAN_INTERACTIVE_NONE:
-        case PARMASAN_INTERACTIVE_FAST:
-        case PARMASAN_INTERACTIVE_SYNC:
-            self->parmasan_interactive_mode = (e_parmasan_interactive_mode)mode;
-            return 0;
-        default:
-            break;
-        }
+    switch (parmasan_mode[0]) {
+    case PARMASAN_INTERACTIVE_NONE:
+    case PARMASAN_INTERACTIVE_FAST:
+    case PARMASAN_INTERACTIVE_SYNC:
+        self->parmasan_interactive_mode = (e_parmasan_interactive_mode)mode;
+        return 0;
+    default:
+        break;
     }
+
+    fprintf(stderr, "PARMASAN_SYNC_MODE environment variable is invalid\n");
     return -1;
 }
 
@@ -140,32 +174,64 @@ int tracer_wait_for_parmasan_acknowledgement(s_tracer* self)
 
 bool tracer_connect_to_socket(s_tracer* self)
 {
-    // Read environment variable "PARMASAN_DAEMON_FD" to get the socket file descriptor
-    char* fd_str = getenv("PARMASAN_DAEMON_FD");
-    if (fd_str == NULL) {
-        fprintf(stderr, "PARMASAN_DAEMON_FD environment variable not set\n");
-        return false;
+    // Read the socket path
+    char* sock_str = getenv("PARMASAN_DAEMON_SOCK");
+    if (sock_str == NULL) {
+        fprintf(stderr, "PARMASAN_DAEMON_SOCK environment variable not set\n");
+        goto error;
     }
 
-    int fd = -1;
-    if (sscanf(fd_str, "%d", &fd) != 1 || fd < 0) {
-        fprintf(stderr, "PARMASAN_DAEMON_FD environment variable is invalid\n");
-        return false;
+    if (*sock_str == '\0') {
+        fprintf(stderr, "PARMASAN_DAEMON_SOCK environment variable must not be empty\n");
+        goto error;
     }
 
-    self->socket_fd = fd;
-
-    int len =
-        snprintf(socket_buffer, sizeof(socket_buffer), TRACER_MESSAGE_PREFIX "INIT", getpid());
-
-    send(self->socket_fd, socket_buffer, len, 0);
-
-    if (tracer_wait_for_parmasan_mode(self) < 0) {
-        fprintf(stderr, "Failed to get parmasan mode");
-        return false;
+    if (tracer_set_sync_mode(self) < 0) {
+        goto error;
     }
+
+    struct sockaddr_un server_address = {};
+    server_address.sun_family = AF_UNIX;
+
+    size_t socket_length = strlen(sock_str);
+
+    if (socket_length >= sizeof(server_address.sun_path)) {
+        socket_length = sizeof(server_address.sun_path) - 1;
+    }
+
+    memcpy(server_address.sun_path, sock_str, socket_length);
+
+    if (sock_str[0] == '$') {
+        server_address.sun_path[0] = '\0';
+    }
+
+    self->socket_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+    if (self->socket_fd < 0) {
+        perror("socket");
+        goto error;
+    }
+
+    int connection_result = connect(self->socket_fd, (const struct sockaddr*)&server_address,
+                                    sizeof(server_address.sun_family) + socket_length);
+
+    if (connection_result < 0) {
+        perror("connect");
+        goto error;
+    }
+
+    // Send "INIT TRACER" packet
+    int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "INIT TRACER");
+    tracer_send_message(self, len, true);
 
     return true;
+
+error:
+    if (self->socket_fd >= 0) {
+        close(self->socket_fd);
+        self->socket_fd = -1;
+    }
+
+    return false;
 }
 
 static char* get_cmdline(pid_t pid, size_t* len)

@@ -1,14 +1,13 @@
 
 add_executable(parmasan
-        daemon-connection-data.cpp
-        daemon-connection-data.hpp
-        daemon/daemon-base.hpp
-        daemon/daemon-base.cpp
+        ../parmasan/daemon-connection-data.hpp
+        parmasan/inputs/socket/socket-server.hpp
+        parmasan/inputs/socket/socket-server.cpp
         main.cpp
-        make-process.cpp
-        make-process.hpp
-        parmasan-daemon.cpp
-        parmasan-daemon.hpp
+        ../parmasan/make-process.cpp
+        ../parmasan/make-process.hpp
+        ../parmasan/parmasan-daemon.cpp
+        ../parmasan/parmasan-daemon.hpp
         parmasan/access-record.hpp
         parmasan/entry-history.cpp
         parmasan/entry-history.hpp
@@ -25,8 +24,8 @@ add_executable(parmasan
         parmasan/target.hpp
         shared/structures.cpp
         shared/structures.hpp
-        tracer-process.cpp
-        tracer-process.hpp
+        ../parmasan/tracer-process.cpp
+        ../parmasan/tracer-process.hpp
         utils/path-walker.cpp
         utils/path-walker.hpp
         utils/run-shell.cpp
@@ -44,6 +43,18 @@ add_executable(parmasan
         interface/globs.cpp
         interface/globs.hpp
         interface/helpers.cpp
-        interface/helpers.hpp)
+        interface/helpers.hpp
+        ../parmasan/daemon-action.hpp
+        parmasan/inputs/parmasan-data-source.hpp
+        parmasan/inputs/socket/socket-data-source.cpp
+        parmasan/inputs/socket/socket-data-source.hpp
+        parmasan/inputs/file/file-data-source.cpp
+        parmasan/inputs/file/file-data-source.hpp
+        parmasan/dumper.cpp
+        parmasan/dumper.hpp
+        options.cpp
+        options.hpp
+        utils/breakpoint-config.cpp
+        utils/breakpoint-config.hpp)
 
 target_include_directories(parmasan PUBLIC .)

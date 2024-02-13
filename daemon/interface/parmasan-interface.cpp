@@ -37,27 +37,27 @@ PS::ParmasanInterface::ParmasanInterface()
     m_commands.push_back(ParmasanInterfaceCommand{
         "break",
         "Break on event(s)",
-        &ParmasanInterface::cmd_break});
+        &ParmasanInterface::cmd_breakpoint});
     m_commands.push_back(ParmasanInterfaceCommand{
         "break-not",
         "Do not break on event(s)",
-        &ParmasanInterface::cmd_break_not});
+        &ParmasanInterface::cmd_breakpoint});
     m_commands.push_back(ParmasanInterfaceCommand{
         "watch",
         "Log event(s)",
-        &ParmasanInterface::cmd_watch});
+        &ParmasanInterface::cmd_breakpoint});
     m_commands.push_back(ParmasanInterfaceCommand{
         "watch-not",
         "Do not log event(s)",
-        &ParmasanInterface::cmd_watch_not});
+        &ParmasanInterface::cmd_breakpoint});
     m_commands.push_back(ParmasanInterfaceCommand{
         "targets",
         "Inspect makefile targets",
         &ParmasanInterface::cmd_targets});
 
     // By default, only trigger on races outside /dev/ directory
-    break_filter.add_pattern("/dev/*", PatternFlags("R").invert());
-    watch_filter.add_pattern("/dev/*", PatternFlags("R").invert());
+    break_filter.add_pattern("/dev/*", BreakpointFlags("R").invert());
+    watch_filter.add_pattern("/dev/*", BreakpointFlags("R").invert());
 }
 
 void PS::ParmasanInterface::enter(PS::ParmasanDaemon* daemon,
@@ -419,39 +419,31 @@ void PS::ParmasanInterface::cmd_status(int /* argc */, char** /* argv */)
     }
 }
 
-void PS::ParmasanInterface::cmd_glob_generic(const char* command, int argc, char** argv,
-                                             bool exclude, PS::FilterSet& filter_set)
+void PS::ParmasanInterface::cmd_breakpoint(int argc, char** argv)
 {
-    if (argc <= 1) {
-        std::cout << "Usage: " << argv[0] << " BREAKPOINT [...BREAKPOINTS]\n";
+    if (argc == 1) {
+        std::cerr << "Usage: " << argv[0] << " BREAKPOINT [BREAKPOINT...]\n";
         return;
     }
 
-    for (int i = 1; i < argc; i++) {
-        if (!parse_glob_generic(argv[i], command, exclude, filter_set)) {
-            break;
-        }
+    BreakpointConfig breakpoint;
+
+    // Distinguish 'break' from 'watch'
+    breakpoint.type = argv[0][0] == 'b' ? BreakpointType::BREAK : BreakpointType::WATCH;
+
+    // For break-not and watch-not
+    if (argv[0][5] == '-') {
+        breakpoint.flags.exclude();
     }
-}
 
-void PS::ParmasanInterface::cmd_break(int argc, char** argv)
-{
-    cmd_glob_generic("break ", argc, argv, false, break_filter);
-}
-
-void PS::ParmasanInterface::cmd_break_not(int argc, char** argv)
-{
-    cmd_glob_generic("break-not ", argc, argv, true, break_filter);
-}
-
-void PS::ParmasanInterface::cmd_watch(int argc, char** argv)
-{
-    cmd_glob_generic("watch ", argc, argv, false, watch_filter);
-}
-
-void PS::ParmasanInterface::cmd_watch_not(int argc, char** argv)
-{
-    cmd_glob_generic("watch-not ", argc, argv, true, watch_filter);
+    for (int i = 1; i < argc; i++) {
+        if (!breakpoint.parse(argv[i])) {
+            std::cerr << "Failed to parse breakpoint: " << argv[i] << "\n"
+                      << "Breakpoint syntax: <[rwauR]:GLOB>\n";
+            return;
+        }
+        add_breakpoint(breakpoint);
+    }
 }
 
 static void print_targets_for_process(const PS::ParmasanStopContext* ctx,
@@ -545,60 +537,6 @@ void PS::ParmasanInterface::cmd_targets(int argc, char** argv)
     }
 }
 
-bool PS::ParmasanInterface::handle_cli_command(int code, const char* command)
-{
-    switch (code) {
-    case 'b':
-        return parse_glob_generic(command, "--break=", false, break_filter);
-    case 'B':
-        return parse_glob_generic(command, "--break-not=", true, break_filter);
-    case 'w':
-        return parse_glob_generic(command, "--watch=", false, watch_filter);
-    case 'W':
-        return parse_glob_generic(command, "--watch-not=", true, watch_filter);
-    default:
-        assert(!"ParmasanInterface::handle_cli_command called with invalid code");
-        return false;
-    }
-}
-
-bool PS::ParmasanInterface::parse_glob_generic(const char* command, const char* type,
-                                               bool exclude, PS::FilterSet& filter_set)
-{
-    auto colon = strchr(command, ':');
-    const char* glob = colon + 1;
-
-    if (!colon || *glob == '\0') {
-        std::cout << "Breakpoint usage: " << type << "<[rwauR]:GLOB>\n";
-        return false;
-    }
-
-    PatternFlags flags;
-
-    if (exclude)
-        flags.exclude();
-
-    while (command != colon) {
-        if (!flags.add_char(*command)) {
-            std::cout << "Unrecognized flag for " << type << ": " << *command << "\n";
-            return false;
-        }
-        command++;
-    }
-
-    // After all, this code is not that performance-critical...
-    std::filesystem::path pattern_path;
-    if (*glob == '/') {
-        pattern_path = glob;
-    } else {
-        pattern_path = std::filesystem::current_path() / glob;
-    }
-
-    filter_set.add_pattern(pattern_path.lexically_normal().string(), flags);
-
-    return true;
-}
-
 bool PS::ParmasanInterface::set_output(const char* filename, std::ios::openmode mode)
 {
     m_dump_output.open(filename, mode);
@@ -663,4 +601,10 @@ void PS::ParmasanInterface::handle_access(PS::ParmasanDaemon* daemon, PS::Tracer
             .access = &access}};
 
     enter(daemon, context);
+}
+
+void PS::ParmasanInterface::add_breakpoint(const PS::BreakpointConfig& config)
+{
+    auto& filter_set = config.type == BreakpointType::WATCH ? watch_filter : break_filter;
+    filter_set.add_pattern(config.path, config.flags);
 }

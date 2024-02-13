@@ -23,6 +23,9 @@ typedef struct tracer {
     e_parmasan_interactive_mode parmasan_interactive_mode;
 } s_tracer;
 
+void tracer_construct(s_tracer* self);
+void tracer_destroy(s_tracer* self);
+
 // The entry point of the tracer. This function starts a socket connection on SOCKET_PATH and
 // forks a child process with given ARGV. This function is blocking and will return only when
 // the child process exits and socket is closed.
@@ -82,7 +85,7 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path);
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self);
 
 // Waits for MODE message from the daemon. Returns 0 on success, or -1 if message is malformed.
-int tracer_wait_for_parmasan_mode(s_tracer* self);
+int tracer_set_sync_mode(s_tracer* self);
 
 /* MARK: Utilities */
 

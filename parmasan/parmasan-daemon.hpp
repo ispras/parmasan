@@ -7,7 +7,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "daemon-connection-data.hpp"
-#include "daemon/daemon-base.hpp"
+#include "parmasan/inputs/parmasan-data-source.hpp"
+#include "parmasan/inputs/socket/socket-server.hpp"
 #include "tracer-process.hpp"
 
 namespace PS
@@ -15,6 +16,7 @@ namespace PS
 
 class ParmasanDaemon;
 
+extern const char* ParmasanInteractiveModeDescr[];
 enum class ParmasanInteractiveMode {
     NONE,
     FAST,
@@ -30,9 +32,8 @@ class ParmasanDaemonDelegate
                                const AccessRecord& access, const File& file) = 0;
 };
 
-class ParmasanDaemon : public DaemonBase, public TracerProcessDelegate
+class ParmasanDaemon : public ParmasanInputDelegate, public TracerProcessDelegate
 {
-
   public:
     explicit ParmasanDaemon() = default;
     ParmasanDaemon(const ParmasanDaemon& copy) = delete;
@@ -46,22 +47,19 @@ class ParmasanDaemon : public DaemonBase, public TracerProcessDelegate
     void set_delegate(ParmasanDaemonDelegate* delegate);
 
     void suspend_last_process();
-
     void resume_last_process();
 
   private:
-    void handle_message() override;
+    void process_connected(ParmasanDataSource* input, pid_t pid) override;
+    void process_message(ParmasanDataSource* input, pid_t pid, std::string_view message) override;
+    void process_disconnected(ParmasanDataSource* input, pid_t pid) override;
 
     void protocol_error();
 
     void create_make_connection(pid_t pid);
-
     void create_tracer_connection(pid_t pid);
 
     void delete_connection(pid_t pid);
-
-    void send_ack_packet();
-    void send_mode_packet();
 
     TracerProcess* get_tracer_for_pid(pid_t pid);
 
@@ -71,10 +69,9 @@ class ParmasanDaemon : public DaemonBase, public TracerProcessDelegate
 
     std::unordered_set<DaemonConnectionData*> m_tracers{};
     std::unordered_map<pid_t, std::unique_ptr<DaemonConnectionData>> m_connections{};
-    DaemonAction action_for_message();
+    DaemonAction action_for_message(pid_t fd, std::string_view message);
 
   private:
-    pid_t m_last_message_pid = 0;
     ParmasanInteractiveMode m_interactive_mode = ParmasanInteractiveMode::NONE;
     ParmasanDaemonDelegate* m_delegate = nullptr;
 };

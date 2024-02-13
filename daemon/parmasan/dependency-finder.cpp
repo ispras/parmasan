@@ -1,6 +1,6 @@
 
 #include "dependency-finder.hpp"
-#include "make-process.hpp"
+#include "../../parmasan/make-process.hpp"
 #include "target.hpp"
 
 bool PS::IDependencyFinder::find_common_make_and_dependency(BuildContext a_ctx,

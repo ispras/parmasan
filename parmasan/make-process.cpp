@@ -25,12 +25,12 @@ DaemonAction PS::MakeConnectionHandler::handle_packet(const char* buffer)
         return DaemonActionCode::ERROR;
     case MAKE_EVENT_TARGET_PID:
         if (m_make_process->read_target_pid_event(buffer)) {
-            return DaemonActionCode::ACKNOWLEDGE;
+            return DaemonActionCode::CONTINUE;
         }
         return DaemonActionCode::ERROR;
     case MAKE_EVENT_GOAL:
         if (m_make_process->read_goal_event(buffer)) {
-            return DaemonActionCode::ACKNOWLEDGE;
+            return DaemonActionCode::CONTINUE;
         }
         return DaemonActionCode::ERROR;
     case GENERAL_EVENT_INIT:
@@ -51,7 +51,7 @@ DaemonAction PS::MakeConnectionHandler::handle_packet(const char* buffer)
         // make processes.
         turn_into_sibling();
 
-        return DaemonActionCode::ACKNOWLEDGE;
+        return DaemonActionCode::CONTINUE;
     default:
         return DaemonActionCode::ERROR;
     }

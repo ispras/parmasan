@@ -1,5 +1,6 @@
 #pragma once
 
+#include "daemon-action.hpp"
 #include "daemon-connection-data.hpp"
 #include "parmasan/entry-history.hpp"
 #include "parmasan/filename-database.hpp"

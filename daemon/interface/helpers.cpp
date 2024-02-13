@@ -246,30 +246,7 @@ size_t PS::GlobFilter::match_file_rec(const PS::File& file, size_t state)
     return state;
 }
 
-bool PS::PatternFlags::add_char(char c)
-{
-    switch (c) {
-    case 'r':
-        read_bit = true;
-        return true;
-    case 'w':
-        write_bit = true;
-        return true;
-    case 'a':
-        access_bit = true;
-        return true;
-    case 'u':
-        unlink_bit = true;
-        return true;
-    case 'R':
-        race_bit = true;
-        return true;
-    default:
-        return false;
-    }
-}
-
-void PS::FilterSet::add_pattern(const std::string& pattern, const PS::PatternFlags& flags)
+void PS::FilterSet::add_pattern(const std::string& pattern, const PS::BreakpointFlags& flags)
 {
     bool is_inverted = flags.inverted_bit;
     bool is_and = flags.and_bit;

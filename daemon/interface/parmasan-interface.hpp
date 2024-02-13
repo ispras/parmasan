@@ -1,12 +1,12 @@
 #pragma once
 
+#include "../../parmasan/parmasan-daemon.hpp"
+#include "../../parmasan/tracer-process.hpp"
 #include "helpers.hpp"
-#include "parmasan-daemon.hpp"
 #include "parmasan/access-record.hpp"
 #include "parmasan/file.hpp"
 #include "parmasan/process.hpp"
 #include "parmasan/race.hpp"
-#include "tracer-process.hpp"
 
 namespace PS
 {
@@ -47,7 +47,7 @@ class ParmasanInterface : public ParmasanDaemonDelegate
     void enter(ParmasanDaemon* daemon, const ParmasanStopContext& context);
     bool set_output(const char* filename, std::ios::openmode mode);
 
-    bool handle_cli_command(int code, const char* command);
+    void add_breakpoint(const BreakpointConfig& config);
 
   private:
     std::string get_command();
@@ -62,21 +62,13 @@ class ParmasanInterface : public ParmasanDaemonDelegate
     void cmd_pidup(int argc, char** argv);
     void cmd_piddown(int argc, char** argv);
     void cmd_status(int argc, char** argv);
-    void cmd_break(int argc, char** argv);
-    void cmd_break_not(int argc, char** argv);
-    void cmd_watch(int argc, char** argv);
-    void cmd_watch_not(int argc, char** argv);
+    void cmd_breakpoint(int argc, char** argv);
     void cmd_pid(int argc, char** argv);
     void cmd_targets(int argc, char** argv);
 
     void handle_race(ParmasanDaemon* daemon, TracerProcess* tracer, const Race& race) override;
     void handle_access(PS::ParmasanDaemon* daemon, PS::TracerProcess* tracer,
                        const AccessRecord& access, const File& file) override;
-
-    void cmd_glob_generic(const char* command, int argc, char** argv, bool exclude,
-                          PS::FilterSet& filter_set);
-    bool parse_glob_generic(const char* command, const char* type, bool exclude,
-                            PS::FilterSet& filter_set);
 
     bool m_stopped = false;
     const ParmasanStopContext* m_stop_context = nullptr;

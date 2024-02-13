@@ -1,6 +1,6 @@
 #pragma once
 
-#include "daemon/daemon-base.hpp"
+#include "daemon-action.hpp"
 
 namespace PS
 {

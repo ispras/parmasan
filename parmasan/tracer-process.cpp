@@ -72,7 +72,7 @@ DaemonAction PS::TracerProcess::read_file_event(TracerEventType type, const char
     }
 
     if (file_entry.inode == 0) {
-        return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+        return DaemonActionCode::CONTINUE;
     }
 
     auto process = get_alive_process(pid);
@@ -80,13 +80,13 @@ DaemonAction PS::TracerProcess::read_file_event(TracerEventType type, const char
     EntryData* entry_data = m_filename_database.update_file(file_path, file_entry);
 
     if (!entry_data) {
-        return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+        return DaemonActionCode::CONTINUE;
     }
 
     BuildContext context = get_context_for_process(process);
 
     if (!context) {
-        return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+        return DaemonActionCode::CONTINUE;
     }
 
     AccessRecord record{
@@ -97,7 +97,7 @@ DaemonAction PS::TracerProcess::read_file_event(TracerEventType type, const char
 
     add_access_to_file(entry_data, record);
 
-    return DaemonActionCode::ACKNOWLEDGE_IF_SYNC;
+    return DaemonActionCode::CONTINUE;
 }
 
 void PS::TracerProcess::add_access_to_file(EntryData* entry_data, AccessRecord access)
@@ -204,7 +204,7 @@ DaemonAction PS::TracerProcess::read_child_event(const char* buffer)
 
     process->cmd_line = std::string(cmdline, cmdline_length);
 
-    return DaemonActionCode::ACKNOWLEDGE;
+    return DaemonActionCode::CONTINUE;
 }
 
 DaemonAction PS::TracerProcess::read_die_event(const char* buffer)

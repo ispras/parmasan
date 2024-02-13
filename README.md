@@ -5,8 +5,6 @@ executables:
 
 - parmasan daemon
 - tracer
-- eavesdropper (for [recording a build](#recording-a-build))
-- tracer stub (for [replaying a build](#replaying-a-build))
 - patched remake (hosted on a [separate repository](https://github.com/ispras/parmasan-remake), should be cloned
   separately)
 
@@ -26,8 +24,6 @@ make -C parmasan/build
 # Paths to binaries are referred below as follows:
 export PARMASAN_BIN="$(pwd)/parmasan/build/daemon/parmasan"
 export TRACER_BIN="$(pwd)/parmasan/build/tracer/tracer"
-export EAVESDROPPER_BIN="$(pwd)/parmasan/build/eavesdropper/eavesdropper"
-export TRACER_STUB_BIN="$(pwd)/parmasan/build/tracer-stub/tracer-stub"
 ```
 
 **Note:** You should also build the [parmasan-remake](https://github.com/ispras/parmasan-remake) project. It has its own
@@ -70,6 +66,9 @@ Usage: parmasan
 	[-o | --output OUTPUT]
 	[-a | --append]
 	[-i[MODE] | --interactive [MODE]]
+	[-d | --dump]
+	[-r | --read INPUT]
+	[-s | --socket SOCKET]
 	[-b<BREAKPOINT> | --break=BREAKPOINT]
 	[-B<BREAKPOINT> | --break-not=BREAKPOINT]
 	[-w<BREAKPOINT> | --watch=BREAKPOINT]
@@ -81,8 +80,46 @@ When called without `COMMAND`, parmasan executable starts an interactive shell a
 started manually from there.
 
 **Note:** Don't reset the environment before invoking remake (e.g. if your build command is a script that does something
-else before invoking remake). The `tracer` and `remake` executables expect `PARMASAN_DAEMON_FD` environment variable to
+else before invoking remake). The `tracer` and `remake` executables expect `PARMASAN_DAEMON_SOCK` environment variable
+to
 be set by parmasan daemon.
+
+#### CLI Flags:
+
+- `-o | --output OUTPUT`:
+  Change the output file. Default is `parmasan-dump.txt`.
+
+- `-a | --append`
+  Append to the output file instead of overwriting it.
+
+- `-i[MODE] | --interactive [MODE]`
+  Enable interactive mode. Mode is either `NONE`, `FAST`, or `SYNC`. Default is `NONE`, implicit value is `SYNC`. Read
+  more in [Using breakpoints](#using-breakpoints) section.
+
+- `-d | --dump`
+  Dump the build log instead of doing the race condition search. Read more in
+  [Recording and replaying a build](#recording-and-replaying-a-build)
+
+- `-r | --read INPUT`
+  Read the build log as an input. Read more in [Recording and replaying a build](#recording-and-replaying-a-build)
+
+- `-s | --socket SOCKET`
+  Change the path for internally used unix socket. Leading `$` can be added to use socket in abstract namespace.
+  Default is `$parmasan-socket`
+
+- `-b<BREAKPOINT> | --break=BREAKPOINT`
+  Break on certain events. This flag can only be used if interactive mode is not `NONE`. Read more in
+  [Using breakpoints](#using-breakpoints) section.
+
+- `-B<BREAKPOINT> | --break-not=BREAKPOINT`
+  Do not break on certain events. This flag can only be used if interactive mode is not `NONE`. Read more in
+  [Using breakpoints](#using-breakpoints) section.
+
+- `-w<BREAKPOINT> | --watch=BREAKPOINT`
+  Log certain events to the output file. Read more in [Using breakpoints](#using-breakpoints) section.
+
+- `-W<BREAKPOINT> | --watch-not=BREAKPOINT`
+  Do not log certain events to the output file. Read more in [Using breakpoints](#using-breakpoints) section.
 
 ### Tracer
 
@@ -93,7 +130,7 @@ Usage: tracer COMMAND [ARGS...]
 ```
 
 **Note:** tracer should be launched as a child process of parmasan daemon, either through specifying it as a `COMMAND`
-or by using its interactive shell. It won't launch if `PARMASAN_DAEMON_FD` environment variable is not present.
+or by using its interactive shell. It won't launch if `PARMASAN_DAEMON_SOCK` environment variable is not present.
 
 **Note:** tracer uses `ptrace` syscall to intercept system calls of the build processes. This can cause trouble under
 docker or some restricted/old kernels. Make sure it's available on your system.
@@ -108,53 +145,28 @@ The patched version of `remake` have new `parmasan-strategy` flag:
 remake <...> --parmasan-strategy=[env|require|disable]
 ```
 
-- **`env`:** (_default_) - use the parmasan daemon if the `PARMASAN_DAEMON_FD` environment variable is present.
-- **`require`:** Always use the parmasan daemon. Stop the build if `PARMASAN_DAEMON_FD` is not present.
-- **`disable`:** Ignore `PARMASAN_DAEMON_FD` and act as unpatched remake.
+- **`env`:** (_default_) - use the parmasan daemon if the `PARMASAN_DAEMON_SOCK` environment variable is present.
+- **`require`:** Always use the parmasan daemon. Stop the build if `PARMASAN_DAEMON_SOCK` is not present.
+- **`disable`:** Ignore `PARMASAN_DAEMON_SOCK` and act as unpatched remake.
 
 ## Recording and replaying a build
 
 Replaying a build can be much quicker than restarting the entire build process from scratch.
 
-To record a build, the `eavesdropper` executable is used. It should be launched as a parent for tracer process from
-inside the parmasan daemon.
-
-The `eavesdropper` executable works similar to `tee`  tool in Unix. It intercepts communication messages between
-parmasan daemon and its underlying processes and dumps them to the specified output.
+To record a build, the `-d` or `--dump` flag is used. It tells parmasan to dump the build log in the output file
+instead of doing its usual duty of detecting the race conditions.
 
 ```
-Usage: %s [-o OUTPUT] [--] COMMAND [ARGS...]
+$PARMASAN_BIN --dump --output build-log.txt $TRACER_BIN ...
 ```
 
-If the `-o` flag is not present, the `eavesdropper` binary will use `stdout`.
-
-**Note**: `eavesdropper` will not bring an interactive shell if `COMMAND` is not specified. It's a required argument.
-
-### Recording a build
-
-Proper parmasan invocation with eavesdropper could look like this:
+To use a build log as an input for parmasan daemon, use `-r` or `--read` flag.
 
 ```
-$PARMASAN_BIN <parmasan flags...> \
-	$EAVESDROPPER_BIN -o eavesdropper-log.txt \
-	$TRACER_BIN \
-	$REMAKE_BIN <make arguments...>
+$PARMASAN_BIN --read build-log.txt --output races.txt
 ```
 
-Now the `eavesdropper-log.txt` will contain human-readable message dump.
-
-### Replaying a build
-
-To use a message dump as an input for parmasan daemon, `tracer-stub`  executable is used:
-
-```
-$PARMASAN_BIN <parmasan flags...> \
-	$TRACER_STUB_BIN eavesdropper-log.txt
-```
-
-**Hint**: When using `tracer-stub`, the fast interactive mode (`--interactive=fast`) will not have any downsides. It can
-be used to improve sanitizer performance for free. Interactive modes should not necessarily match on record and replay
-stage.
+When `--read` flag is used, parmasan will not launch any child processes.
 
 ## Using breakpoints
 
@@ -259,8 +271,11 @@ corresponding [command line arguments](#-break-and-watch-options).
 
 - `piddown -a -d 5`: Print the process tree from the root process with depth of 5.
 - `break 'rwu:/*/log.txt'`: Break on the next read, write, or unlink operation on any file named `log.txt`.
-- `pidup -l`: Print the parent list for the process that performed the left access in a context of detected race condition.
-- `targets -n 20 -f *.h -p 5583.0`: Print first 20 target names ending with `.h` of the first make process with pid 5583.
+- `pidup -l`: Print the parent list for the process that performed the left access in a context of detected race
+  condition.
+- `targets -n 20 -f *.h -p 5583.0`: Print first 20 target names ending with `.h` of the first make process with pid
+  5583.
 
-**Hint:** The command can be specified by its prefix, as long as it's unambiguous. For example, `q` can be typed for `quit`,
+**Hint:** The command can be specified by its prefix, as long as it's unambiguous. For example, `q` can be typed
+for `quit`,
 `c` for `continue`, etc.

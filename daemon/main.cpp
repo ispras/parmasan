@@ -1,109 +1,63 @@
 
 #include <fstream>
-#include <unistd.h>
 #include <getopt.h>
+#include "../parmasan/parmasan-daemon.hpp"
 #include "interface/parmasan-interface.hpp"
-#include "parmasan-daemon.hpp"
-#include "utils/run-shell.hpp"
+#include "options.hpp"
+#include "parmasan/dumper.hpp"
+#include "parmasan/inputs/file/file-data-source.hpp"
+#include "parmasan/inputs/socket/socket-data-source.hpp"
 
 int main(int argc, char** argv)
 {
-    // Prevent daemon from running inside another daemon
-    if (getenv("PARMASAN_DAEMON_FD") != nullptr) {
+    if (getenv("PARMASAN_DAEMON_SOCK") != nullptr) {
         std::cerr << "Cannot start parmasan daemon from another parmasan daemon" << std::endl;
         return EXIT_FAILURE;
     }
 
-    struct option long_options[] = {
-        {"append", no_argument, nullptr, 'a'},
-        {"output", required_argument, nullptr, 'o'},
-        {"interactive", optional_argument, nullptr, 'i'},
-        {"break", required_argument, nullptr, 'b'},
-        {"break-not", required_argument, nullptr, 'B'},
-        {"watch", required_argument, nullptr, 'w'},
-        {"watch-not", required_argument, nullptr, 'W'},
-        {nullptr, 0, nullptr, 0}};
+    PS::Options options(argc, argv);
 
-    const char* output_fname = "parmasan-dump.txt";
-    std::ios_base::openmode mode = std::ofstream::out;
-
-    PS::ParmasanDaemon daemon;
-    PS::ParmasanInterface interface;
-
-    daemon.set_delegate(&interface);
-
-    int opt;
-    while ((opt = getopt_long(argc, argv, "+ab:B:w:W:o:i::", long_options, nullptr)) != -1) {
-        switch (opt) {
-        case 'a':
-            mode |= std::ofstream::app;
-            break;
-        case 'o':
-            output_fname = optarg;
-            break;
-        case 'i':
-            if (optarg == nullptr || strcmp(optarg, "sync") == 0) {
-                daemon.set_interactive_mode(PS::ParmasanInteractiveMode::SYNC);
-            } else if (strcmp(optarg, "fast") == 0) {
-                daemon.set_interactive_mode(PS::ParmasanInteractiveMode::FAST);
-            } else if (strcmp(optarg, "none") == 0) {
-                daemon.set_interactive_mode(PS::ParmasanInteractiveMode::NONE);
-            } else {
-                std::cerr << "Invalid argument for --interactive: " << optarg
-                          << ". Acceptable values are: sync, fast, none\n";
-                return EXIT_FAILURE;
-            }
-            break;
-        case 'b':
-        case 'B':
-        case 'w':
-        case 'W':
-            if (!interface.handle_cli_command(opt, optarg)) {
-                return EXIT_FAILURE;
-            }
-            break;
-        case '?':
-        default:
-            std::cerr << "Usage: " << argv[0] << " [-o | --output OUTPUT] [-a | --append]"
-                                                 " [-i[MODE] | --interactive [MODE]]"
-                                                 " [-b<BREAKPOINT> | --break=BREAKPOINT]"
-                                                 " [-B<BREAKPOINT> | --break-not=BREAKPOINT]"
-                                                 " [-w<BREAKPOINT> | --watch=BREAKPOINT]"
-                                                 " [-W<BREAKPOINT> | --watch-not=BREAKPOINT]"
-                                                 " [-- COMMAND [ARGS...]]\n";
-            return EXIT_FAILURE;
-        }
-    }
-
-    interface.set_output(output_fname, mode);
-
-    PS::ParmasanDaemon::setup_signal_blocking();
-
-    int daemon_fd = daemon.setup();
-
-    if (daemon_fd < 0) {
-        std::cerr << "Failed to setup parmasan daemon\n";
+    if (!options.parse()) {
         return EXIT_FAILURE;
     }
 
-    // Set the environment variable so that the tracer can connect to the daemon
+    std::unique_ptr<PS::ParmasanDataSource> data_source{};
 
-    char daemon_fd_str[16] = {};
-    sprintf(daemon_fd_str, "%d", daemon_fd);
-    setenv("PARMASAN_DAEMON_FD", daemon_fd_str, 1);
+    if (options.o_input_fname) {
+        // Use a dump file as an input with PS::ParmasanFileDataSource
+        data_source = std::make_unique<PS::ParmasanFileDataSource>(options.o_input_fname);
+    } else {
+        // Run the build and start a socket with PS::ParmasanSocketDataSource
+        auto socket_data_source = std::make_unique<PS::ParmasanSocketDataSource>();
+        socket_data_source->set_build_args(argc - optind, argv + optind);
+        socket_data_source->set_interactive_mode(options.o_interactive_mode);
+        if (!socket_data_source->listen(options.o_socket_name, 1024)) {
+            std::cerr << "Failed to listen the socket\n";
+            return EXIT_FAILURE;
+        }
 
-    // Run the specified script, or the "bash" command if argv[1] is not set
-
-    std::cout << "Running daemon\n";
-
-    if (fork() == 0) {
-        PS::ParmasanDaemon::reset_signal_blocking();
-        run_shell(argc - optind, argv + optind);
+        data_source = std::move(socket_data_source);
     }
 
-    if (daemon.loop()) {
-        return EXIT_SUCCESS;
-    }
+    if (options.o_dump) {
+        PS::ParmasanDumper dumper(options.o_output_fname, options.o_output_mode);
+        data_source->set_delegate(&dumper);
+        return data_source->loop() ? EXIT_SUCCESS : EXIT_FAILURE;
+    } else {
+        PS::ParmasanDaemon daemon;
+        PS::ParmasanInterface interface;
 
-    return EXIT_FAILURE;
+        interface.set_output(options.o_output_fname, options.o_output_mode);
+        daemon.set_delegate(&interface);
+        daemon.set_interactive_mode(options.o_interactive_mode);
+        data_source->set_delegate(&daemon);
+
+        for (auto& breakpoint : options.o_breakpoints) {
+            interface.add_breakpoint(breakpoint);
+        }
+
+        std::cout << "Running daemon\n";
+
+        return data_source->loop() ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
 }
