@@ -42,7 +42,7 @@ void PS::ParmasanSocketDataSource::disconnect_process(pid_t m_pid)
     m_pid_map.erase(m_pid);
 }
 
-void PS::ParmasanSocketDataSource::handle_connection(PS::SocketServer* server, int fd)
+void PS::ParmasanSocketDataSource::handle_connection(PS::SocketServer* /* server */, int fd)
 {
     pid_t process_pid = -1;
     socklen_t len = sizeof(pid_t);
@@ -53,7 +53,7 @@ void PS::ParmasanSocketDataSource::handle_connection(PS::SocketServer* server, i
     m_delegate->process_connected(this, process_pid);
 }
 
-void PS::ParmasanSocketDataSource::handle_disconnection(PS::SocketServer* server, int fd)
+void PS::ParmasanSocketDataSource::handle_disconnection(PS::SocketServer* /* server */, int fd)
 {
     auto it = m_pid_map.find(fd);
     if (it == m_pid_map.end())

@@ -8,7 +8,7 @@
 const char* PS::ParmasanInteractiveModeDescr[] = {
     "NONE", "FAST", "SYNC"};
 
-void PS::ParmasanDaemon::process_message(ParmasanDataSource* input, pid_t pid, std::string_view message)
+void PS::ParmasanDaemon::process_message(ParmasanDataSource* /* input */, pid_t pid, std::string_view message)
 {
     auto action = action_for_message(pid, message);
     auto code = action.action;
@@ -26,11 +26,11 @@ void PS::ParmasanDaemon::process_message(ParmasanDataSource* input, pid_t pid, s
     }
 }
 
-void PS::ParmasanDaemon::process_connected(ParmasanDataSource* input, pid_t pid)
+void PS::ParmasanDaemon::process_connected(ParmasanDataSource* /* input */, pid_t /* pid */)
 {
 }
 
-void PS::ParmasanDaemon::process_disconnected(ParmasanDataSource* input, pid_t pid)
+void PS::ParmasanDaemon::process_disconnected(ParmasanDataSource* /* input */, pid_t pid)
 {
     delete_connection(pid);
 }

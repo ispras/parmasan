@@ -111,7 +111,7 @@ void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child,
         cmdlen = PATH_MAX;
     }
 
-    int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "%s %d %d %d ",
+    int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "%s %d %d %ld ",
                        TRACER_EVENT_CODES[type], event.pid, event.ppid, cmdlen);
     memcpy(message_buffer + len, cmdline, cmdlen);
 
@@ -263,7 +263,7 @@ static char* get_cmdline(pid_t pid, size_t* len)
             }
         }
 
-        if (fwrite(tmp_buffer, 1, bytes_read, memstream) < 0) {
+        if (fwrite(tmp_buffer, 1, bytes_read, memstream) != bytes_read) {
             perror("fwrite");
             goto err;
         }
@@ -586,7 +586,7 @@ void tracer_unlink_path(s_tracer* self, s_tracee* process, const char* path)
 }
 
 static void tracer_handle_unlinkat_syscall(s_tracer* self, s_tracee* process, int dirfd,
-                                           const char* pathname, int flag)
+                                           const char* pathname, int /* flag */)
 {
     char path[PATH_MAX + 1];
 
@@ -602,28 +602,29 @@ static void tracer_handle_unlink_syscall(s_tracer* self, s_tracee* process, cons
 }
 
 static void tracer_handle_open_syscall(s_tracer* self, s_tracee* process, const char* pathname,
-                                       int flags, mode_t mode)
+                                       int flags, mode_t /* mode */)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
     tracer_report_read_write_for_flags(self, process, fd, flags, pathname, AT_FDCWD);
 }
 
 static void tracer_handle_openat_syscall(s_tracer* self, s_tracee* process, int dirfd,
-                                         const char* pathname, int flags, mode_t mode)
+                                         const char* pathname, int flags, mode_t /* mode */)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
     tracer_report_read_write_for_flags(self, process, fd, flags, pathname, dirfd);
 }
 
 static void tracer_handle_openat2_syscall(s_tracer* self, s_tracee* process, int dirfd,
-                                          const char* pathname, struct open_how* how, size_t size)
+                                          const char* pathname, struct open_how* how,
+                                          size_t /* size */)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
     tracer_report_read_write_for_flags(self, process, fd, how->flags, pathname, dirfd);
 }
 
 static void tracer_handle_creat_syscall(s_tracer* self, s_tracee* process, const char* pathname,
-                                        mode_t mode)
+                                        mode_t /* mode */)
 {
     int fd = (int)(tracee_get_syscall_return_code(process));
     tracer_report_read_write_for_flags(self, process, fd, O_WRONLY | O_CREAT | O_TRUNC, pathname,
@@ -647,7 +648,7 @@ static void tracer_handle_mkdir_at_path(s_tracer* self, s_tracee* process, const
 }
 
 static void tracer_handle_mkdirat_syscall(s_tracer* self, s_tracee* process, int dirfd,
-                                          const char* pathname, mode_t mode)
+                                          const char* pathname, mode_t /* mode */)
 {
     char path[PATH_MAX + 1];
 
@@ -674,20 +675,21 @@ static void tracer_handle_rmdir_syscall(s_tracer* self, s_tracee* process, const
 }
 
 // Handle rename as unlink of destination
-static void tracer_handle_rename_syscall(s_tracer* self, s_tracee* process, const char* oldpath,
-                                         const char* newpath)
+static void tracer_handle_rename_syscall(s_tracer* self, s_tracee* process,
+                                         const char* /* oldpath */, const char* newpath)
 {
     tracer_handle_unlink_syscall(self, process, newpath);
 }
 
-static void tracer_handle_renameat_syscall(s_tracer* self, s_tracee* process, int olddirfd,
-                                           const char* oldpath, int newdirfd, const char* newpath)
+static void tracer_handle_renameat_syscall(s_tracer* self, s_tracee* process, int /* olddirfd */,
+                                           const char* /* oldpath */, int newdirfd,
+                                           const char* newpath)
 {
     tracer_handle_unlinkat_syscall(self, process, newdirfd, newpath, 0);
 }
 
-static void tracer_handle_renameat2_syscall(s_tracer* self, s_tracee* process, int olddirfd,
-                                            const char* oldpath, int newdirfd,
+static void tracer_handle_renameat2_syscall(s_tracer* self, s_tracee* process, int /* olddirfd */,
+                                            const char* /* oldpath */, int newdirfd,
                                             const char* newpath, int flags)
 {
     if (flags & RENAME_NOREPLACE || flags & RENAME_EXCHANGE)
