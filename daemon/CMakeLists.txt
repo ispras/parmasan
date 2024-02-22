@@ -1,60 +1,29 @@
 
 add_executable(parmasan
-        ../parmasan/daemon-connection-data.hpp
-        parmasan/inputs/socket/socket-server.hpp
         parmasan/inputs/socket/socket-server.cpp
         main.cpp
         ../parmasan/make-process.cpp
-        ../parmasan/make-process.hpp
         ../parmasan/parmasan-daemon.cpp
-        ../parmasan/parmasan-daemon.hpp
-        parmasan/access-record.hpp
         parmasan/entry-history.cpp
-        parmasan/entry-history.hpp
-        parmasan/entry.hpp
-        parmasan/file-access-type.hpp
         parmasan/file.cpp
-        parmasan/file.hpp
         parmasan/filename-database.cpp
-        parmasan/filename-database.hpp
-        parmasan/dependency-finder.hpp
         parmasan/target-database.cpp
-        parmasan/target-database.hpp
         parmasan/target.cpp
-        parmasan/target.hpp
         shared/structures.cpp
-        shared/structures.hpp
         ../parmasan/tracer-process.cpp
-        ../parmasan/tracer-process.hpp
         utils/path-walker.cpp
-        utils/path-walker.hpp
         utils/run-shell.cpp
-        utils/run-shell.hpp
         parmasan/access-record.cpp
-        parmasan/build-context.hpp
-        parmasan/make-goal.hpp
         parmasan/build-context.cpp
-        parmasan/process.hpp
         parmasan/process.cpp
-        parmasan/race.hpp
         parmasan/dependency-finder.cpp
         interface/parmasan-interface.cpp
-        interface/parmasan-interface.hpp
         interface/globs.cpp
-        interface/globs.hpp
         interface/helpers.cpp
-        interface/helpers.hpp
-        ../parmasan/daemon-action.hpp
-        parmasan/inputs/parmasan-data-source.hpp
         parmasan/inputs/socket/socket-data-source.cpp
-        parmasan/inputs/socket/socket-data-source.hpp
         parmasan/inputs/file/file-data-source.cpp
-        parmasan/inputs/file/file-data-source.hpp
         parmasan/dumper.cpp
-        parmasan/dumper.hpp
         options.cpp
-        options.hpp
-        utils/breakpoint-config.cpp
-        utils/breakpoint-config.hpp)
+        utils/breakpoint-config.cpp)
 
 target_include_directories(parmasan PUBLIC .)
