@@ -124,13 +124,13 @@ void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child,
     tracer_send_message(self, len, true);
 }
 
-void tracer_report_die(s_tracer* self, pid_t pid)
+void tracer_report_die(s_tracer* self, pid_t pid, bool sync)
 {
     e_tracer_event_type event = TRACER_EVENT_DIE;
 
     int len = snprintf(message_buffer, PARMASAN_MAX_MSG_LEN, "%s %d",
                        TRACER_EVENT_CODES[event], pid);
-    tracer_send_message(self, len, false);
+    tracer_send_message(self, len, sync);
 }
 
 int tracer_set_sync_mode(s_tracer* self)
@@ -315,7 +315,9 @@ void tracer_parent_task(s_tracer* self)
         tracer_ptrace_loop(self);
     }
 
-    tracer_report_die(self, getpid());
+    // Self death event is synchronous to ensure that all
+    // previous messages are delivered to parmasan.
+    tracer_report_die(self, getpid(), true);
 
     pidset_destroy(&self->stopped_pids);
 }
@@ -344,7 +346,7 @@ void tracer_bpf_loop(s_tracer* self)
             pidset_add(&self->stopped_pids, process.pid);
             continue;
         } else if (tracee_exited(&process)) {
-            tracer_report_die(self, process.pid);
+            tracer_report_die(self, process.pid, false);
         } else if (tracee_stopped_at_fork_or_clone(&process)) {
             tracer_handle_fork_or_clone(self, &process);
         } else if (tracee_stopped_at_exec(&process)) {
@@ -378,7 +380,7 @@ void tracer_ptrace_loop(s_tracer* self)
             pidset_add(&self->stopped_pids, process.pid);
             continue;
         } else if (tracee_exited(&process)) {
-            tracer_report_die(self, process.pid);
+            tracer_report_die(self, process.pid, false);
         } else if (tracee_stopped_at_fork_or_clone(&process)) {
             tracer_handle_fork_or_clone(self, &process);
         } else if (tracee_stopped_at_exec(&process)) {

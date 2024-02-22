@@ -74,7 +74,7 @@ void tracer_report_child_with_cmdline(s_tracer* self, pid_t parent, pid_t child,
 // Informs the daemon that the process with PID is about to exit. This must
 // be the last event received from the given PID. PID 0 refers to the tracer
 // process itself.
-void tracer_report_die(s_tracer* self, pid_t pid);
+void tracer_report_die(s_tracer* self, pid_t pid, bool sync);
 
 // Informs the daemon that the file on PATH was deleted. If the file does not have any
 // hardlinks, the TOTAL_UNLINK event is also reported.
