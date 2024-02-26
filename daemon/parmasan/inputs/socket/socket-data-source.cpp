@@ -2,6 +2,7 @@
 #include "socket-data-source.hpp"
 #include <filesystem>
 #include <sys/socket.h>
+#include <unistd.h>
 #include "utils/run-shell.hpp"
 
 bool PS::ParmasanSocketDataSource::listen(const std::string& sockaddr, int request_queue_length)

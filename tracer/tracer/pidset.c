@@ -1,5 +1,6 @@
 
 #include "pidset.h"
+#include <stddef.h>
 #include <malloc.h>
 
 bool pidset_create(struct pidset* set, int capacity)

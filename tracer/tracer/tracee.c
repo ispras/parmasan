@@ -111,7 +111,7 @@ void tracee_ptrace_continue_to_syscall(s_tracee* self)
     tracee_ptrace_continue_with_request(self, PTRACE_SYSCALL);
 }
 
-void tracee_ptrace_continue_with_request(s_tracee* self, enum __ptrace_request request)
+void tracee_ptrace_continue_with_request(s_tracee* self, int request)
 {
     if (tracee_stopped_at_signal(self)) {
         ptrace(request, self->pid, 0, WSTOPSIG(self->status));

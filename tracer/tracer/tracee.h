@@ -83,7 +83,7 @@ int tracee_read_word(s_tracee* self, const void* process_addr, uint64_t* result)
 int tracee_read_string(s_tracee* self, const char* process_addr, char* buffer, size_t buffer_size);
 
 // Asks ptrace to let the tracee continue with the given REQUEST argument.
-void tracee_ptrace_continue_with_request(s_tracee* self, enum __ptrace_request request);
+void tracee_ptrace_continue_with_request(s_tracee* self, int request);
 
 // Returns the pid of the tracee with use of the /proc filesystem.
 int tracee_get_ppid(s_tracee* process);

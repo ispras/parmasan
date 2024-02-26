@@ -3,9 +3,10 @@
 #include <cassert>
 #include <cerrno>
 #include <csignal>
+#include <cstring>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <sys/fcntl.h>
 #include <sys/signalfd.h>
 
 int PS::SocketServer::setup()
