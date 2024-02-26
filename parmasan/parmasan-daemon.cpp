@@ -2,7 +2,7 @@
 #include "parmasan-daemon.hpp"
 #include <csignal>
 #include <sys/socket.h>
-#include "make-process.hpp"
+#include "make-connection-handler.hpp"
 #include "tracer-process.hpp"
 
 const char* PS::ParmasanInteractiveModeDescr[] = {

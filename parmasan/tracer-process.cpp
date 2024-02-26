@@ -1,8 +1,8 @@
 
 #include "tracer-process.hpp"
 #include <csignal>
-#include "make-process.hpp"
-#include "parmasan/target-database.hpp"
+#include "make-connection-handler.hpp"
+#include "parmasan/make-process.hpp"
 #include "shared/structures.hpp"
 
 PS::TracerProcess::TracerProcess(pid_t pid)
