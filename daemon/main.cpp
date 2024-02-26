@@ -1,12 +1,12 @@
 
 #include <fstream>
 #include <getopt.h>
-#include "../parmasan/parmasan-daemon.hpp"
 #include "interface/parmasan-interface.hpp"
 #include "options.hpp"
 #include "parmasan/dumper.hpp"
 #include "parmasan/inputs/file/file-data-source.hpp"
 #include "parmasan/inputs/socket/socket-data-source.hpp"
+#include "parmasan/parmasan-daemon.hpp"
 
 int main(int argc, char** argv)
 {

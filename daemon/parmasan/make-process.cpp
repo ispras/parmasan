@@ -1,6 +1,6 @@
 
 #include "make-process.hpp"
-#include "../../parmasan/make-connection-handler.hpp"
+#include "make-connection-handler.hpp"
 #include "make-process.hpp"
 
 bool PS::MakeProcess::read_target_pid_event(const char* buffer)

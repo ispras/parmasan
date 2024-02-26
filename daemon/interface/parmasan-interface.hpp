@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../../parmasan/parmasan-daemon.hpp"
-#include "../../parmasan/tracer-process.hpp"
 #include "helpers.hpp"
 #include "parmasan/access-record.hpp"
 #include "parmasan/file.hpp"
+#include "parmasan/parmasan-daemon.hpp"
 #include "parmasan/process.hpp"
 #include "parmasan/race.hpp"
+#include "parmasan/tracer-process.hpp"
 
 namespace PS
 {

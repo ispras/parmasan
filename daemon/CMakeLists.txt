@@ -2,15 +2,15 @@
 add_executable(parmasan
         parmasan/inputs/socket/socket-server.cpp
         main.cpp
-        ../parmasan/make-connection-handler.cpp
-        ../parmasan/parmasan-daemon.cpp
+        parmasan/make-connection-handler.cpp
+        parmasan/parmasan-daemon.cpp
         parmasan/entry-history.cpp
         parmasan/file.cpp
         parmasan/filename-database.cpp
         parmasan/make-process.cpp
         parmasan/target.cpp
         shared/structures.cpp
-        ../parmasan/tracer-process.cpp
+        parmasan/tracer-process.cpp
         utils/path-walker.cpp
         utils/run-shell.cpp
         parmasan/access-record.cpp

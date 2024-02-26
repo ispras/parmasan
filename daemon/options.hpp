@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <getopt.h>
-#include "../parmasan/parmasan-daemon.hpp"
+#include "parmasan/parmasan-daemon.hpp"
 #include "utils/breakpoint-config.hpp"
 
 namespace PS
