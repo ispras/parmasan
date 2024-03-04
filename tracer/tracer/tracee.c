@@ -162,8 +162,9 @@ ssize_t tracee_get_cwd(s_tracee* self, char* path, size_t path_size)
 
 int tracee_read_word(s_tracee* self, const void* process_addr, uint64_t* result)
 {
+    errno = 0;
     *result = ptrace(PTRACE_PEEKTEXT, self->pid, process_addr, NULL);
-    if (errno) {
+    if (*result == -1 && errno) {
         perror("PTRACE_PEEKTEXT");
         return -1;
     }
