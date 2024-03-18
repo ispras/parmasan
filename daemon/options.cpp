@@ -5,7 +5,7 @@ const struct option PS::long_options[] = {
     {"dump", no_argument, nullptr, 'd'},
     {"read", required_argument, nullptr, 'r'},
     {"output", required_argument, nullptr, 'o'},
-    {"interactive", optional_argument, nullptr, 'i'},
+    {"interactive", no_argument, nullptr, 'i'},
     {"break", required_argument, nullptr, 'b'},
     {"break-not", required_argument, nullptr, 'B'},
     {"watch", required_argument, nullptr, 'w'},
@@ -46,17 +46,7 @@ bool PS::Options::parse()
             }
             break;
         case 'i':
-            if (optarg == nullptr || strcmp(optarg, "sync") == 0) {
-                o_interactive_mode = PS::ParmasanInteractiveMode::SYNC;
-            } else if (strcmp(optarg, "fast") == 0) {
-                o_interactive_mode = PS::ParmasanInteractiveMode::FAST;
-            } else if (strcmp(optarg, "none") == 0) {
-                o_interactive_mode = PS::ParmasanInteractiveMode::NONE;
-            } else {
-                std::cerr << "Invalid argument for --interactive: " << optarg
-                          << ". Acceptable values are: sync, fast, none\n";
-                return EXIT_FAILURE;
-            }
+            o_interactive_mode = PS::ParmasanInteractiveMode::SYNC;
             break;
         case 'b':
         case 'B':

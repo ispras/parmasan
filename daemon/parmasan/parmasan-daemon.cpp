@@ -6,11 +6,13 @@
 #include "tracer-process.hpp"
 
 const char* PS::ParmasanInteractiveModeDescr[] = {
-    "NONE", "FAST", "SYNC"};
+    "NONE", "SYNC"};
 
-void PS::ParmasanDaemon::process_message(ParmasanDataSource* /* input */, pid_t pid,
+void PS::ParmasanDaemon::process_message(ParmasanDataSource* input, pid_t pid,
                                          std::string_view message)
 {
+    m_current_data_source = input;
+
     auto action = action_for_message(pid, message);
     auto code = action.action;
 
@@ -25,6 +27,8 @@ void PS::ParmasanDaemon::process_message(ParmasanDataSource* /* input */, pid_t 
         }
         delete_connection(pid_to_disconnect);
     }
+
+    m_current_data_source = nullptr;
 }
 
 void PS::ParmasanDaemon::process_connected(ParmasanDataSource* /* input */, pid_t /* pid */)
@@ -62,18 +66,18 @@ DaemonAction PS::ParmasanDaemon::action_for_message(pid_t pid, std::string_view 
 
         switch (message_author) {
         case MessageAuthorType::MESSAGE_TYPE_TRACER:
-            create_tracer_connection(pid);
-            break;
+            if (!create_tracer_connection(pid)) {
+                return DaemonActionCode::ERROR;
+            }
+            return DaemonActionCode::CONTINUE;
 
         case MessageAuthorType::MESSAGE_TYPE_MAKE:
             create_make_connection(pid);
-            break;
+            return DaemonActionCode::CONTINUE;
 
         default:
             return DaemonActionCode::ERROR;
         }
-
-        return DaemonActionCode::CONTINUE;
     }
 
     auto* data = m_connections[pid].get();
@@ -81,24 +85,12 @@ DaemonAction PS::ParmasanDaemon::action_for_message(pid_t pid, std::string_view 
     return data->handle_packet(buffer);
 }
 
-PS::TracerProcess* PS::ParmasanDaemon::get_tracer_for_pid(pid_t pid)
-{
-    for (DaemonConnectionData* process : m_tracers) {
-        auto tracer = (TracerProcess*)process;
-        if (tracer->has_child_with_pid(pid))
-            return tracer;
-    }
-    return nullptr;
-}
-
 void PS::ParmasanDaemon::create_make_connection(pid_t pid)
 {
     auto make_data = std::make_unique<MakeConnectionHandler>(pid);
 
-    TracerProcess* tracer = get_tracer_for_pid(pid);
-
-    if (tracer) {
-        make_data->attach_to_tracer(tracer);
+    if (m_tracer && m_tracer->has_child_with_pid(pid)) {
+        make_data->attach_to_tracer(m_tracer);
     } else {
         std::cerr << "Warning: dangling make process pid=" << pid << "\n";
     }
@@ -106,14 +98,18 @@ void PS::ParmasanDaemon::create_make_connection(pid_t pid)
     m_connections.insert({pid, std::move(make_data)});
 }
 
-void PS::ParmasanDaemon::create_tracer_connection(pid_t pid)
+bool PS::ParmasanDaemon::create_tracer_connection(pid_t pid)
 {
+    if (m_tracer) {
+        return false;
+    }
     auto tracer_data = std::make_unique<TracerProcess>(pid);
-    m_tracers.insert(tracer_data.get());
-
+    m_tracer = tracer_data.get();
     tracer_data->set_delegate(this);
 
     m_connections.insert({pid, std::move(tracer_data)});
+
+    return true;
 }
 
 void PS::ParmasanDaemon::protocol_error()
@@ -131,10 +127,8 @@ void PS::ParmasanDaemon::delete_connection(pid_t pid)
 
     // Tell the make processes handlers that their tracer is no longer
     // available.
-    if (m_tracers.count(connection)) {
-        auto tracer = (TracerProcess*)connection;
-
-        for (auto& make_process : tracer->get_make_processes()) {
+    if (m_tracer == connection) {
+        for (auto& make_process : m_tracer->get_make_processes()) {
             auto make_pid = make_process->get_process_data()->id;
 
             auto make_it = m_connections.find(make_pid.pid);
@@ -150,7 +144,7 @@ void PS::ParmasanDaemon::delete_connection(pid_t pid)
             }
         }
 
-        m_tracers.erase(connection);
+        m_tracer = nullptr;
     }
 
     m_connections.erase(it);
@@ -184,14 +178,4 @@ void PS::ParmasanDaemon::handle_access(PS::TracerProcess* tracer, const PS::Acce
 void PS::ParmasanDaemon::set_delegate(PS::ParmasanDaemonDelegate* delegate)
 {
     m_delegate = delegate;
-}
-
-void PS::ParmasanDaemon::suspend_last_process()
-{
-    // TODO: Tell the tracer to suspend a process
-}
-
-void PS::ParmasanDaemon::resume_last_process()
-{
-    // TODO: Tell the tracer to resume a process
 }

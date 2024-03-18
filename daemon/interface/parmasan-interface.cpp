@@ -66,16 +66,8 @@ void PS::ParmasanInterface::enter(PS::ParmasanDaemon* daemon,
     m_stopped = true;
     m_stop_context = &context;
 
-    if (daemon->get_interactive_mode() == ParmasanInteractiveMode::FAST) {
-        daemon->suspend_last_process();
-    }
-
     while (m_stopped) {
         execute_user_command();
-    }
-
-    if (daemon->get_interactive_mode() == ParmasanInteractiveMode::FAST) {
-        daemon->resume_last_process();
     }
 
     m_stop_context = nullptr;

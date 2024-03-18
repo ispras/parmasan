@@ -146,7 +146,6 @@ int tracer_set_sync_mode(s_tracer* self)
 
     switch (parmasan_mode[0]) {
     case PARMASAN_INTERACTIVE_NONE:
-    case PARMASAN_INTERACTIVE_FAST:
     case PARMASAN_INTERACTIVE_SYNC:
         self->parmasan_interactive_mode = (e_parmasan_interactive_mode)mode;
         return 0;
@@ -160,13 +159,11 @@ int tracer_set_sync_mode(s_tracer* self)
 
 int tracer_wait_for_parmasan_acknowledgement(s_tracer* self)
 {
-    char buffer[8] = {};
-
-    ssize_t length = read(self->socket_fd, buffer, sizeof(buffer));
+    ssize_t length = read(self->socket_fd, socket_buffer, sizeof(socket_buffer));
     if (length < 0)
         return -1;
 
-    if (strcmp(buffer, "ACK") == 0)
+    if (memcmp(socket_buffer, "ACK", 4) == 0)
         return 0;
 
     return -1;

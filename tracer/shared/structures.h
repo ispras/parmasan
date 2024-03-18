@@ -12,7 +12,6 @@ typedef struct entry {
 
 typedef enum parmasan_interactive_mode {
     PARMASAN_INTERACTIVE_NONE = 'N',
-    PARMASAN_INTERACTIVE_FAST = 'F',
     PARMASAN_INTERACTIVE_SYNC = 'S'
 } e_parmasan_interactive_mode;
 

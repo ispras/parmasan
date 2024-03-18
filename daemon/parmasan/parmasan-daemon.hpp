@@ -19,7 +19,6 @@ class ParmasanDaemon;
 extern const char* ParmasanInteractiveModeDescr[];
 enum class ParmasanInteractiveMode {
     NONE,
-    FAST,
     SYNC
 };
 
@@ -46,9 +45,6 @@ class ParmasanDaemon : public ParmasanInputDelegate, public TracerProcessDelegat
 
     void set_delegate(ParmasanDaemonDelegate* delegate);
 
-    void suspend_last_process();
-    void resume_last_process();
-
   private:
     void process_connected(ParmasanDataSource* input, pid_t pid) override;
     void process_message(ParmasanDataSource* input, pid_t pid, std::string_view message) override;
@@ -57,23 +53,23 @@ class ParmasanDaemon : public ParmasanInputDelegate, public TracerProcessDelegat
     void protocol_error();
 
     void create_make_connection(pid_t pid);
-    void create_tracer_connection(pid_t pid);
+    bool create_tracer_connection(pid_t pid);
 
     void delete_connection(pid_t pid);
-
-    TracerProcess* get_tracer_for_pid(pid_t pid);
 
     void handle_race(TracerProcess* tracer, const Race& race) override;
     void handle_access(TracerProcess* tracer, const PS::AccessRecord& access,
                        const PS::File& file) override;
 
-    std::unordered_set<DaemonConnectionData*> m_tracers{};
+    TracerProcess* m_tracer{};
     std::unordered_map<pid_t, std::unique_ptr<DaemonConnectionData>> m_connections{};
     DaemonAction action_for_message(pid_t fd, std::string_view message);
 
   private:
     ParmasanInteractiveMode m_interactive_mode = ParmasanInteractiveMode::NONE;
     ParmasanDaemonDelegate* m_delegate = nullptr;
+
+    ParmasanDataSource* m_current_data_source = nullptr;
 };
 
 } // namespace PS
