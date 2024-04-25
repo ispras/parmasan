@@ -153,6 +153,7 @@ void PS::SocketServer::handle_connection_data(int fd)
     }
 
     remove_fd_from_epoll_interest_list(fd);
+    close(fd);
 
     if (m_delegate) {
         m_delegate->handle_disconnection(this, fd);
