@@ -296,8 +296,6 @@ void PS::SocketServer::handle_pending_signals()
 
     while ((bytes = read(m_sig_fd, &fdsi, sizeof(fdsi))) == sizeof(fdsi)) {
         if (fdsi.ssi_signo == SIGTERM || fdsi.ssi_signo == SIGCHLD || fdsi.ssi_signo == SIGINT) {
-            fprintf(stderr, "Received signal %d (%s), terminating.\n", fdsi.ssi_signo,
-                    strsignal(fdsi.ssi_signo));
             m_terminated = true;
             return;
         }

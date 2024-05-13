@@ -56,8 +56,6 @@ int main(int argc, char** argv)
             interface.add_breakpoint(breakpoint);
         }
 
-        std::cout << "Running daemon\n";
-
         return data_source->loop() ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 }
