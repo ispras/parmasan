@@ -55,6 +55,7 @@ class ParmasanInterface : public ParmasanDaemonDelegate
     void execute_user_command();
     void execute_argv(int argc, char** argv);
     void prompt();
+    void quit_parmasan();
 
     void cmd_help(int argc, char** argv);
     void cmd_quit(int argc, char** argv);

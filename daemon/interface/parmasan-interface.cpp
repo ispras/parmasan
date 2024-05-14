@@ -87,13 +87,16 @@ static void trim(std::string& command)
 
 std::string PS::ParmasanInterface::get_command()
 {
+    if (!std::cin.good()) {
+        quit_parmasan();
+        return "";
+    }
+
     std::string result;
 
-    while (result.empty()) {
-        prompt();
-        std::getline(std::cin, result);
-        trim(result);
-    }
+    prompt();
+    std::getline(std::cin, result);
+    trim(result);
 
     return result;
 }
@@ -103,6 +106,9 @@ void PS::ParmasanInterface::execute_user_command()
     std::vector<char*> argv;
 
     std::string command = get_command();
+    if (command.empty())
+        return;
+
     char* parsed = command.data();
     argv.push_back(parsed);
 
@@ -188,10 +194,15 @@ void PS::ParmasanInterface::cmd_help(int /* argc */, char** /* argv */)
     }
 }
 
-void PS::ParmasanInterface::cmd_quit(int /* argc */, char** /* argv */)
+void PS::ParmasanInterface::quit_parmasan()
 {
     m_stop_context->tracer->kill();
     m_stopped = false;
+}
+
+void PS::ParmasanInterface::cmd_quit(int /* argc */, char** /* argv */)
+{
+    quit_parmasan();
 }
 
 void PS::ParmasanInterface::cmd_continue_execution(int /* argc */, char** /* argv */)
