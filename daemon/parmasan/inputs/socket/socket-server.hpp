@@ -50,6 +50,8 @@ class SocketServer
         return m_buffer;
     }
 
+    void close();
+
   private:
     // MARK: Utilities
 

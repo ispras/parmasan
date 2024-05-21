@@ -23,7 +23,9 @@ bool PS::ParmasanSocketDataSource::listen(const std::string& sockaddr, int reque
 bool PS::ParmasanSocketDataSource::loop()
 {
     PS::SocketServer::setup_signal_blocking();
-    if (fork() == 0) {
+
+    pid_t child_pid = fork();
+    if (child_pid == 0) {
         // PARMASAN_DAEMON_SOCK tells the child processes where is the daemon socket located
         setenv("PARMASAN_DAEMON_SOCK", m_sockaddr.c_str(), 1);
 
@@ -31,16 +33,30 @@ bool PS::ParmasanSocketDataSource::loop()
         setenv("PARMASAN_SYNC_MODE",
                PS::ParmasanInteractiveModeDescr[(int)m_interactive_mode], 1);
 
+        setpgrp();
+
         PS::SocketServer::reset_signal_blocking();
         run_shell(m_build_argc, m_build_argv);
     }
 
-    return m_server.loop();
+    bool result = m_server.loop();
+
+    if (m_fd_map.count(child_pid)) {
+        kill(-child_pid, SIGKILL);
+    }
+
+    return result;
 }
 
 void PS::ParmasanSocketDataSource::disconnect_process(pid_t m_pid)
 {
-    m_pid_map.erase(m_pid);
+    if (m_fd_map.count(m_pid)) {
+        int fd = m_fd_map.at(m_pid);
+        m_pid_map.erase(fd);
+        m_fd_map.erase(m_pid);
+
+        m_server.disconnect(fd);
+    }
 }
 
 void PS::ParmasanSocketDataSource::handle_connection(PS::SocketServer* /* server */, int fd)
@@ -102,4 +118,9 @@ void PS::ParmasanSocketDataSource::set_build_args(int argc, char** argv)
 void PS::ParmasanSocketDataSource::set_interactive_mode(PS::ParmasanInteractiveMode mode)
 {
     m_interactive_mode = mode;
+}
+
+void PS::ParmasanSocketDataSource::close()
+{
+    m_server.close();
 }

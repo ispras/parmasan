@@ -39,6 +39,8 @@ class ParmasanSocketDataSource : public ParmasanDataSource, public SocketServerD
 
     void disconnect_process(pid_t m_pid) override;
 
+    void close() override;
+
   private:
     void handle_connection(SocketServer* server, int fd) override;
 

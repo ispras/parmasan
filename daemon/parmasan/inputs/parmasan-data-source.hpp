@@ -20,6 +20,7 @@ class ParmasanDataSource
     }
 
     virtual bool loop() = 0;
+    virtual void close() = 0;
 
   protected:
     ParmasanInputDelegate* m_delegate = nullptr;

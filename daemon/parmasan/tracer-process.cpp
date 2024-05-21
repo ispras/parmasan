@@ -327,8 +327,12 @@ pid_t PS::TracerProcess::get_pid()
 
 void PS::TracerProcess::kill()
 {
-    m_killed = true;
-    ::kill(m_pid, SIGKILL);
+    if (!m_killed) {
+        m_killed = true;
+        if (m_delegate) {
+            m_delegate->handle_termination(this);
+        }
+    }
 }
 
 const std::vector<std::unique_ptr<PS::MakeProcess>>& PS::TracerProcess::get_make_processes()

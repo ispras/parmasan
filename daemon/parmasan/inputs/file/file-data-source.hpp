@@ -16,6 +16,7 @@ class ParmasanFileDataSource : public ParmasanDataSource
 
     bool loop() override;
     void disconnect_process(pid_t pid) override;
+    void close() override;
 
   private:
     void skip_word();

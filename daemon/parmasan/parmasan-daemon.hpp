@@ -60,6 +60,7 @@ class ParmasanDaemon : public ParmasanInputDelegate, public TracerProcessDelegat
     void handle_race(TracerProcess* tracer, const Race& race) override;
     void handle_access(TracerProcess* tracer, const PS::AccessRecord& access,
                        const PS::File& file) override;
+    void handle_termination(TracerProcess* tracer) override;
 
     TracerProcess* m_tracer{};
     std::unordered_map<pid_t, std::unique_ptr<DaemonConnectionData>> m_connections{};

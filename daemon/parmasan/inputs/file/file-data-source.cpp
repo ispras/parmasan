@@ -71,3 +71,8 @@ void PS::ParmasanFileDataSource::disconnect_process(pid_t pid)
 {
     connected_pids.erase(pid);
 }
+
+void PS::ParmasanFileDataSource::close()
+{
+    m_input.close();
+}

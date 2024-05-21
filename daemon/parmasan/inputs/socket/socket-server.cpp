@@ -23,7 +23,7 @@ int PS::SocketServer::setup()
     m_epoll_events.resize(MAX_EVENTS);
     m_epoll_fd = epoll_create1(0);
     if (add_fd_to_epoll_interest_list(m_server_socket) == -1) {
-        close(m_server_socket);
+        ::close(m_server_socket);
         m_server_socket = -1;
         return -1;
     }
@@ -105,7 +105,7 @@ bool PS::SocketServer::setup_signal_fd()
     }
 
     if (add_fd_to_epoll_interest_list(m_sig_fd) == -1) {
-        close(m_sig_fd);
+        ::close(m_sig_fd);
         m_sig_fd = -1;
         return false;
     }
@@ -117,7 +117,7 @@ void PS::SocketServer::cleanup_signal_fd()
 {
     if (m_sig_fd >= -1) {
         remove_fd_from_epoll_interest_list(m_sig_fd);
-        close(m_sig_fd);
+        ::close(m_sig_fd);
         m_sig_fd = -1;
     }
 }
@@ -152,12 +152,7 @@ void PS::SocketServer::handle_connection_data(int fd)
         }
     }
 
-    remove_fd_from_epoll_interest_list(fd);
-    close(fd);
-
-    if (m_delegate) {
-        m_delegate->handle_disconnection(this, fd);
-    }
+    disconnect(fd);
 }
 
 bool PS::SocketServer::listen(std::string_view socket_name, int request_queue_length)
@@ -269,11 +264,11 @@ PS::SocketServer::~SocketServer()
     unlink_socket();
 
     if (m_server_socket != -1) {
-        close(m_server_socket);
+        ::close(m_server_socket);
         m_server_socket = -1;
     }
     if (m_epoll_fd != -1) {
-        close(m_epoll_fd);
+        ::close(m_epoll_fd);
         m_epoll_fd = -1;
     }
 }
@@ -310,5 +305,15 @@ void PS::SocketServer::set_delegate(SocketServerDelegate* delegate)
 
 void PS::SocketServer::disconnect(int fd)
 {
-    close(fd);
+    ::close(fd);
+    remove_fd_from_epoll_interest_list(fd);
+
+    if (m_delegate) {
+        m_delegate->handle_disconnection(this, fd);
+    }
+}
+
+void PS::SocketServer::close()
+{
+    m_terminated = true;
 }

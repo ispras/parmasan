@@ -175,6 +175,13 @@ void PS::ParmasanDaemon::handle_access(PS::TracerProcess* tracer, const PS::Acce
     }
 }
 
+void PS::ParmasanDaemon::handle_termination(PS::TracerProcess* tracer)
+{
+    if (m_current_data_source) {
+        m_current_data_source->close();
+    }
+}
+
 void PS::ParmasanDaemon::set_delegate(PS::ParmasanDaemonDelegate* delegate)
 {
     m_delegate = delegate;

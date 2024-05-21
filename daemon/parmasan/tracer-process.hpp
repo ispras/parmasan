@@ -18,6 +18,7 @@ class TracerProcessDelegate
     virtual void handle_race(TracerProcess* tracer, const PS::Race& race) = 0;
     virtual void handle_access(TracerProcess* tracer, const PS::AccessRecord& access,
                                const PS::File& file) = 0;
+    virtual void handle_termination(TracerProcess* tracer) = 0;
 };
 
 class TracerProcess : public DaemonConnectionData
