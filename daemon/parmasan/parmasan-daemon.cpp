@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parmasan-daemon.hpp"
 #include <csignal>

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "process.hpp"
 #include <cstring>

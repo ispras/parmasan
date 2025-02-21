@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parmasan-interface.hpp"
 #include <algorithm>

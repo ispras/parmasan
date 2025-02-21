@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 project(tracer)
 
 add_executable(tracer

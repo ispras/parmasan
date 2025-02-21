@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "socket-server.hpp"
 #include <cassert>

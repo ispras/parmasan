@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "filename-database.hpp"
 #include "utils/path-walker.hpp"

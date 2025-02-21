@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# SPDX-License-Identifier: MIT
+
 fix_flag=false
 
 while [ $# -gt 0 ]; do

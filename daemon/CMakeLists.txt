@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 
 add_executable(parmasan
         parmasan/inputs/socket/socket-server.cpp

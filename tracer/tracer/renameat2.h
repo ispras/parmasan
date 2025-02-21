@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef TRACER_RENAMEAT2_H
 #define TRACER_RENAMEAT2_H
 

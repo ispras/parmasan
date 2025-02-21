@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "helpers.hpp"
 #include <getopt.h>

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "tracer.h"
 #include <assert.h>

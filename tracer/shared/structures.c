@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 const char* TRACER_EVENT_CODES[] = {
     "READ        ",

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef SECCOMP_H
 #define SECCOMP_H
 

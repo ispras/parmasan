@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "options.hpp"
 
 const struct option PS::long_options[] = {

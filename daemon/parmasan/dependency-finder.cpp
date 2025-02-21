@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "dependency-finder.hpp"
 #include "make-connection-handler.hpp"

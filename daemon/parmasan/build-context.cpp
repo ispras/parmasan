@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "build-context.hpp"
 #include "make-process.hpp"

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "file-data-source.hpp"
 
 bool PS::ParmasanFileDataSource::loop()

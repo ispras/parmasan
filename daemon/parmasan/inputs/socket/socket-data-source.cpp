@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "socket-data-source.hpp"
 #include <filesystem>

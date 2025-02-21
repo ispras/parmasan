@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "dumper.hpp"
 #include <iomanip>
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "pidset.h"
 #include <stddef.h>

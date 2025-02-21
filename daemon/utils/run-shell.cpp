@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "run-shell.hpp"
 #include <cstdio>

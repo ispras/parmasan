@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef TRACER_OPENAT2_H
 #define TRACER_OPENAT2_H
 
