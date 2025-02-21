@@ -19,7 +19,7 @@ class MakeProcess
 {
   public:
     explicit MakeProcess(TracerProcess* attached_tracer)
-        : m_attached_tracer(attached_tracer){};
+        : m_attached_tracer(attached_tracer) {};
 
     bool read_target_pid_event(const char* buffer);
     bool read_dependency_event(const char* buffer);

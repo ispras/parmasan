@@ -79,8 +79,7 @@ class SocketServer
     int m_server_socket = -1;
     bool m_terminated = false;
 
-    struct sockaddr_un m_sockaddr {
-    };
+    struct sockaddr_un m_sockaddr{};
     std::vector<epoll_event> m_epoll_events{};
     std::string m_buffer{};
 

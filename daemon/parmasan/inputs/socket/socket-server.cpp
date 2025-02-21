@@ -50,8 +50,7 @@ int PS::SocketServer::add_fd_to_epoll_interest_list(int fd) const
 
     // Add socket to epoll
 
-    struct epoll_event event {
-    };
+    struct epoll_event event{};
     event.data.fd = fd;
     event.events = EPOLLIN | EPOLLET;
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
@@ -285,8 +284,7 @@ void PS::SocketServer::unlink_socket()
 
 void PS::SocketServer::handle_pending_signals()
 {
-    struct signalfd_siginfo fdsi {
-    };
+    struct signalfd_siginfo fdsi{};
     ssize_t bytes = 0;
 
     while ((bytes = read(m_sig_fd, &fdsi, sizeof(fdsi))) == sizeof(fdsi)) {
