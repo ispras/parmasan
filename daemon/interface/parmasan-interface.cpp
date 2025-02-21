@@ -1,5 +1,6 @@
 
 #include "parmasan-interface.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <getopt.h>
 #include "helpers.hpp"
