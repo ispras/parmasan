@@ -262,6 +262,8 @@ or context-specific flags.
 
 The `-m` option can be used for `pidup` and `piddown` commands to only list `make` processes.
 
+The `-L` option can be used for `piddown` command is used to only list alive processes.
+
 The `-f <GLOB>` option can be used for `targets` command to filter targets by their names.
 
 `break[-not]` and `watch[-not]` commands take a breakpoint as an argument. They have the same syntax as the

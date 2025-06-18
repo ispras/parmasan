@@ -95,6 +95,5 @@ void PS::MakeConnectionHandler::attach_to_tracer(PS::TracerProcess* tracer)
         return;
     }
 
-    m_make_process->set_parent_context({.target = parent_make->get_target_for_process(process),
-                                        .goal = parent_make->get_current_goal()});
+    m_make_process->set_parent_context({.target = parent_make->get_target_for_process(process)});
 }

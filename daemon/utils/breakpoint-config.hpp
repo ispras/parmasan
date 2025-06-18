@@ -46,13 +46,6 @@ struct BreakpointFlags {
         return *this;
     }
 
-    BreakpointFlags& invert()
-    {
-        inverted_bit = true;
-        and_bit = false;
-        return *this;
-    }
-
     bool add_char(char c);
 };
 

@@ -14,19 +14,59 @@ namespace PS
 
 struct ParmasanStopContext;
 
+class ProcessWalker
+{
+  public:
+    ProcessWalker() = default;
+
+    ProcessWalker(ProcessData* process)
+        : process(process) {}
+
+    ProcessWalker next_sibling();
+    ProcessWalker first_child();
+    ProcessWalker find_relevant();
+
+    bool operator!()
+    {
+        return !process;
+    }
+
+    explicit operator bool()
+    {
+        return (bool)process;
+    }
+
+    ProcessData* operator*()
+    {
+        return process;
+    }
+
+    ProcessWalker set_make_only(bool make_only);
+    ProcessWalker set_alive_only(bool alive_only);
+    ProcessWalker set_max_depth(int max_depth);
+    ProcessWalker set_process(PS::ProcessData* new_process);
+
+  private:
+    bool is_relevant();
+
+    ProcessData* process = nullptr;
+    bool m_make_only = false;
+    bool m_alive_only = false;
+    int m_max_depth = -1;
+};
+
 class ProcessPrinter
 {
   public:
     ProcessPrinter(const ParmasanStopContext* stop_context)
         : m_stop_context(stop_context) {}
 
-    void print_process_tree(ProcessData* process, int max_depth, bool make_only);
+    void print_process_tree(ProcessWalker walker);
     void print_process(PS::ProcessData* process);
     void print_process_parents(ProcessData* process, bool make_only);
 
   private:
-    void print_tree_recursive(ProcessData* process, int max_depth, bool make_only, int depth,
-                              std::vector<bool>& tree_stack);
+    void print_tree_recursive(ProcessWalker walker, std::vector<bool>& tree_stack);
 
   private:
     const ParmasanStopContext* m_stop_context;

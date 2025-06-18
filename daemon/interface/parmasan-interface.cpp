@@ -57,9 +57,12 @@ PS::ParmasanInterface::ParmasanInterface()
         "Inspect makefile targets",
         &ParmasanInterface::cmd_targets});
 
+    break_filter.add_pattern("*", BreakpointFlags("R"));
+    watch_filter.add_pattern("*", BreakpointFlags("R"));
+
     // By default, only trigger on races outside /dev/ directory
-    break_filter.add_pattern("/dev/*", BreakpointFlags("R").invert());
-    watch_filter.add_pattern("/dev/*", BreakpointFlags("R").invert());
+    break_filter.add_pattern("/dev/*", BreakpointFlags("R").exclude());
+    watch_filter.add_pattern("/dev/*", BreakpointFlags("R").exclude());
 }
 
 void PS::ParmasanInterface::enter(PS::ParmasanDaemon* daemon,
@@ -254,12 +257,12 @@ void PS::ParmasanInterface::cmd_pidup(int argc, char** argv)
 void PS::ParmasanInterface::cmd_piddown(int argc, char** argv)
 {
     int option = 0;
-    int depth = 3;
-    bool make_only = false;
     PidSearchOpts opts{argc, argv};
 
+    auto walker = PS::ProcessWalker().set_max_depth(3);
+
     optind = 0;
-    while ((option = getopt(argc, argv, "+md:alr")) != -1) {
+    while ((option = getopt(argc, argv, "+md:alrL")) != -1) {
         switch (option) {
         case 'a':
         case 'l':
@@ -270,14 +273,20 @@ void PS::ParmasanInterface::cmd_piddown(int argc, char** argv)
                 return;
             }
             break;
-        case 'm':
-            make_only = true;
+        case 'L':
+            walker.set_alive_only(true);
             break;
-        case 'd':
+        case 'm':
+            walker.set_make_only(true);
+            break;
+        case 'd': {
+            int depth = 0;
             if (sscanf(optarg, "%d", &depth) != 1) {
                 std::cout << "piddown: invalid depth: " << optarg << "\n";
                 return;
             }
+            walker.set_max_depth(depth);
+        }
         default:
             break;
         }
@@ -286,7 +295,7 @@ void PS::ParmasanInterface::cmd_piddown(int argc, char** argv)
     opts.read_pid_argument();
 
     if (!opts.is_sufficient_args()) {
-        std::cout << "Usage: piddown [-m] [-d DEPTH] <-l|-r|-a|PID[.EPOCH]>\n";
+        std::cout << "Usage: piddown [-m] [-L] [-d DEPTH] <-l|-r|-a|PID[.EPOCH]>\n";
         return;
     }
 
@@ -295,7 +304,8 @@ void PS::ParmasanInterface::cmd_piddown(int argc, char** argv)
     if (!process)
         return;
 
-    ProcessPrinter(m_stop_context).print_process_tree(process, depth, make_only);
+    walker.set_process(process);
+    ProcessPrinter(m_stop_context).print_process_tree(walker);
 }
 
 void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
@@ -334,7 +344,7 @@ void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
     }
 
     std::cout << "Process " << process->id.pid << "." << process->id.epoch << "\n";
-    std::cout << " - Executable name: " << process->get_executable_name() << "\n";
+    std::cout << " - Executable name:      " << process->get_executable_name() << "\n";
     std::cout << " - Arguments:\n";
 
     int i = 0;
@@ -343,7 +353,7 @@ void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
         i++;
     }
 
-    std::cout << " - Parent process: ";
+    std::cout << " - Parent process:       ";
 
     if (process->parent) {
         ProcessPrinter(m_stop_context).print_process(process->parent);
@@ -351,7 +361,7 @@ void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
         std::cout << "none\n";
     }
 
-    std::cout << " - Child processes: ";
+    std::cout << " - Child processes:      ";
 
     if (!process->first_child) {
         std::cout << "none\n";
@@ -363,8 +373,8 @@ void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
         }
     }
 
-    std::cout << " - Is dead?         " << (process->dead ? "true" : "false") << "\n";
-    std::cout << " - Is make process? " << (process->make_process ? "true" : "false") << "\n";
+    std::cout << " - Is dead?              " << (process->dead ? "true" : "false") << "\n";
+    std::cout << " - Is make process?      " << (process->make_process ? "true" : "false") << "\n";
 
     std::cout << " - Nearest make process: ";
 
@@ -372,13 +382,6 @@ void PS::ParmasanInterface::cmd_pid(int argc, char** argv)
 
     if (make_process) {
         ProcessPrinter(m_stop_context).print_process(make_process);
-        auto goal = make_process->make_process->get_current_goal();
-        std::cout << " - Current goal: ";
-        if (goal) {
-            std::cout << goal->name << "\n";
-        } else {
-            std::cout << "none\n";
-        }
     } else {
         std::cout << "none\n";
     }
@@ -395,17 +398,15 @@ void PS::ParmasanInterface::cmd_status(int /* argc */, char** /* argv */)
         std::cout << "Detected race:\n";
         std::cout << " - file: " << file->get_path() << "\n";
         std::cout << " - left access:  \n"
-                  << "   - type:   " << access_a.access_type << "\n"
-                  << "   - target: '" << access_a.context.target->name << "'\n"
-                  << "   - goal:   '" << access_a.context.goal->name << "'\n"
-                  << "   - process ";
+                  << "   - type:    " << access_a.access_type << "\n"
+                  << "   - target:  '" << access_a.context.target->name << "'\n"
+                  << "   - process: ";
         ProcessPrinter(m_stop_context).print_process(access_a.process);
 
         std::cout << " - right access: \n"
-                  << "   - type:   " << access_b.access_type << "\n"
-                  << "   - target  '" << access_b.context.target->name << "'\n"
-                  << "   - goal    '" << access_b.context.goal->name << "'\n"
-                  << "   - process ";
+                  << "   - type:    " << access_b.access_type << "\n"
+                  << "   - target:  '" << access_b.context.target->name << "'\n"
+                  << "   - process: ";
         ProcessPrinter(m_stop_context).print_process(access_b.process);
     } else if (m_stop_context->reason == ParmasanStopReason::access) {
         auto access = m_stop_context->access.access;
@@ -413,10 +414,9 @@ void PS::ParmasanInterface::cmd_status(int /* argc */, char** /* argv */)
 
         std::cout << "Stopped on file access:\n"
                   << " - file: " << file->get_path() << "\n"
-                  << "   - type:   " << access->access_type << "\n"
-                  << "   - target: '" << access->context.target->name << "'\n"
-                  << "   - goal:   '" << access->context.goal->name << "'\n"
-                  << "   - process ";
+                  << "   - type:    " << access->access_type << "\n"
+                  << "   - target:  '" << access->context.target->name << "'\n"
+                  << "   - process: ";
 
         ProcessPrinter(m_stop_context).print_process(access->process);
     } else {
@@ -456,7 +456,7 @@ static void print_targets_for_process(const PS::ParmasanStopContext* ctx,
                                       int limit)
 {
     if (!process->make_process) {
-        std::cout << "Specified process is not make process\n";
+        std::cout << "Specified process is not a make process\n";
         return;
     }
 

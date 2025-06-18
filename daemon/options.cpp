@@ -116,7 +116,7 @@ bool PS::Options::store_breakpoint(int opt, const char* optarg)
     }
 
     if (isupper(opt)) {
-        breakpoint.flags.invert();
+        breakpoint.flags.exclude();
     }
 
     o_breakpoints.push_back(breakpoint);

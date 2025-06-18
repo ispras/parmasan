@@ -124,13 +124,6 @@ int PS::MakeProcess::get_depth() const
 {
     return m_depth;
 }
-PS::MakeGoal* PS::MakeProcess::get_current_goal() const
-{
-    if (m_goals.empty()) {
-        return nullptr;
-    }
-    return m_goals.back().get();
-}
 
 PS::ProcessData* PS::MakeProcess::get_process_data() const
 {

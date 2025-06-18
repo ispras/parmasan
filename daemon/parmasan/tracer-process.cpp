@@ -167,8 +167,7 @@ PS::BuildContext PS::TracerProcess::get_context_for_process(PS::ProcessData* pro
     }
 
     BuildContext context = {
-        .target = make_process->get_target_for_process(process),
-        .goal = make_process->get_current_goal()};
+        .target = make_process->get_target_for_process(process)};
 
     // If the make process itself have accessed a file, it won't get associated
     // with any target of this make process. In this case this access should be

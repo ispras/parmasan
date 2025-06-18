@@ -4,12 +4,10 @@
 #include <getopt.h>
 #include "parmasan-interface.hpp"
 
-void PS::ProcessPrinter::print_process_tree(PS::ProcessData* process, int max_depth,
-                                            bool make_only)
+void PS::ProcessPrinter::print_process_tree(PS::ProcessWalker walker)
 {
     std::vector<bool> tree_stack;
-    tree_stack.reserve(max_depth);
-    print_tree_recursive(process, max_depth, make_only, 0, tree_stack);
+    print_tree_recursive(walker, tree_stack);
 }
 
 void PS::ProcessPrinter::print_process(PS::ProcessData* process)
@@ -47,38 +45,28 @@ void PS::ProcessPrinter::print_process_parents(PS::ProcessData* process, bool ma
     }
 }
 
-void PS::ProcessPrinter::print_tree_recursive(PS::ProcessData* process, int max_depth,
-                                              bool make_only, int depth,
+void PS::ProcessPrinter::print_tree_recursive(PS::ProcessWalker walker,
                                               std::vector<bool>& tree_stack)
 {
-    bool print = !make_only || process->make_process;
-    if (print) {
-        if (depth > max_depth)
-            return;
-
-        for (size_t i = 0; i < tree_stack.size(); i++) {
-            if (i == tree_stack.size() - 1) {
-                std::cout << (tree_stack[i] ? "├─" : "└─");
-            } else {
-                std::cout << (tree_stack[i] ? "│ " : "  ");
-            }
+    for (size_t i = 0; i < tree_stack.size(); i++) {
+        if (i == tree_stack.size() - 1) {
+            std::cout << (tree_stack[i] ? "├─" : "└─");
+        } else {
+            std::cout << (tree_stack[i] ? "│ " : "  ");
         }
-
-        print_process(process);
-        depth++;
     }
 
-    if (make_only && !process->make_process)
-        return;
+    print_process(*walker);
 
-    assert(!process || process != process->first_child);
+    for (auto child = walker.first_child(); child;) {
+        auto next_sibling = child.next_sibling();
 
-    tree_stack.push_back(false);
-    for (auto child = process->first_child; child; child = child->next_sibling) {
-        tree_stack.back() = child->next_sibling != nullptr;
-        print_tree_recursive(child, max_depth, make_only, depth, tree_stack);
+        tree_stack.push_back((bool)next_sibling);
+        print_tree_recursive(child, tree_stack);
+        tree_stack.pop_back();
+
+        child = next_sibling;
     }
-    tree_stack.pop_back();
 }
 
 int PS::PidSearchOpts::option(int option)
@@ -287,4 +275,87 @@ bool PS::FilterSet::should_trigger_on_access(const AccessRecord& access, const P
     default:
         return false;
     }
+}
+
+PS::ProcessWalker PS::ProcessWalker::next_sibling()
+{
+    auto parent = process;
+
+    while (parent) {
+        auto sibling = parent;
+        while ((sibling = sibling->next_sibling)) {
+            auto relevant = ProcessWalker(*this).set_process(sibling).find_relevant();
+            if (relevant)
+                return relevant;
+        }
+
+        parent = parent->parent;
+
+        if (!parent || ProcessWalker(*this).set_process(parent).is_relevant()) {
+            return ProcessWalker(*this).set_process(nullptr);
+        }
+    }
+
+    return parent;
+}
+
+PS::ProcessWalker PS::ProcessWalker::first_child()
+{
+    if (m_max_depth == 0 || !process)
+        return ProcessWalker(*this).set_process(nullptr);
+
+    auto result = ProcessWalker(*this).set_process(process->first_child).find_relevant();
+    if (m_max_depth > 0) {
+        result.set_max_depth(m_max_depth - 1);
+    }
+    return result;
+}
+
+PS::ProcessWalker PS::ProcessWalker::find_relevant()
+{
+    if (is_relevant()) {
+        return *this;
+    }
+
+    if (!process)
+        return ProcessWalker(*this).set_process(nullptr);
+
+    for (auto i = process->first_child; i; i = i->next_sibling) {
+        auto result = ProcessWalker(*this).set_process(i).find_relevant();
+        if (result)
+            return result;
+    }
+
+    return ProcessWalker(*this).set_process(nullptr);
+}
+
+bool PS::ProcessWalker::is_relevant()
+{
+    return process != nullptr &&
+           (!m_make_only || process->make_process) &&
+           (!m_alive_only || !process->dead);
+}
+
+PS::ProcessWalker PS::ProcessWalker::set_process(PS::ProcessData* new_process)
+{
+    process = new_process;
+    return *this;
+}
+
+PS::ProcessWalker PS::ProcessWalker::set_make_only(bool make_only)
+{
+    m_make_only = make_only;
+    return *this;
+}
+
+PS::ProcessWalker PS::ProcessWalker::set_alive_only(bool alive_only)
+{
+    m_alive_only = alive_only;
+    return *this;
+}
+
+PS::ProcessWalker PS::ProcessWalker::set_max_depth(int max_depth)
+{
+    m_max_depth = max_depth;
+    return *this;
 }
