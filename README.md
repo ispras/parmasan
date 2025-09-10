@@ -16,14 +16,16 @@ executables:
 ## Building
 
 ```bash
+INST_DIR=bin
+
 git clone https://github.com/ispras/parmasan
 mkdir parmasan/build
 cmake -S parmasan -B parmasan/build
 make -C parmasan/build
 
-# Paths to binaries are referred below as follows:
-export PARMASAN_BIN="$(pwd)/parmasan/build/daemon/parmasan"
-export TRACER_BIN="$(pwd)/parmasan/build/tracer/tracer"
+mkdir -p INST_DIR
+ln -s ../parmasan/build/daemon/parmasan INST_DIR/parmasan
+ln -s ../parmasan/build/tracer/tracer INST_DIR/tracer
 ```
 
 **Note:** You should also build the [parmasan-remake](https://github.com/ispras/parmasan-remake) project. It has its own
@@ -41,7 +43,9 @@ git clone https://github.com/ispras/parmasan-remake
 make -C parmasan-remake/lib
 make -C parmasan-remake/libdebugger
 make -C parmasan-remake make
-export REMAKE_BIN=$(pwd)/parmasan-remake/make
+
+mkdir -p INST_DIR
+ln -s ../parmasan-remake/make INST_DIR/make
 ```
 
 ## How to use
@@ -49,9 +53,9 @@ export REMAKE_BIN=$(pwd)/parmasan-remake/make
 **TLDR:** To build your project under parmasan, replace your `make` invocation with the following line:
 
 ```
-$PARMASAN_BIN <parmasan flags...> \
-	$TRACER_BIN \
-	$REMAKE_BIN <make arguments...>
+INST_DIR/parmasan <parmasan flags...> \
+	INST_DIR/tracer \
+	INST_DIR/make <make arguments...>
 ```
 
 **Note:** Pay attention to escaping backslashes above. This is a single command, not three.
@@ -157,13 +161,13 @@ To record a build, the `-d` or `--dump` flag is used. It tells parmasan to dump 
 instead of doing its usual duty of detecting the race conditions.
 
 ```
-$PARMASAN_BIN --dump --output build-log.txt $TRACER_BIN ...
+INST_DIR/parmasan --dump --output build-log.txt INST_DIR/tracer ...
 ```
 
 To use a build log as an input for parmasan daemon, use `-r` or `--read` flag.
 
 ```
-$PARMASAN_BIN --read build-log.txt --output races.txt
+INST_DIR/parmasan --read build-log.txt --output races.txt
 ```
 
 When `--read` flag is used, parmasan will not launch any child processes.
@@ -221,7 +225,7 @@ separately.
 **Example:**
 
 ```
-$PARMASAN_BIN ... \
+INST_DIR/parmasan ... \
 	--break='rw:*/source1.*' \
 	--break='rw:*/source2.*' \
 	--break-not='rw:*.cpp'
